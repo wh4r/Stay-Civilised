@@ -179,6 +179,7 @@ class HydroSimulator(QMainWindow):
         # -----------------------------------------------------------------------------------------------------------
         # Top Section: Annunciators
         # -----------------------------------------------------------------------------------------------------------
+        # Create layout
         annunc_layout = QHBoxLayout()
         self.trip_alarm = Annunciator("TRIP", "red")
         self.alarm_overload = Annunciator("OVERLOAD", "red")
