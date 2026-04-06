@@ -4,6 +4,9 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                              QHBoxLayout, QGridLayout, QLabel, QFrame, QPushButton)
 from PyQt6.QtGui import QPainter, QColor, QPen, QPolygonF, QFont
 from PyQt6.QtCore import Qt, QPointF, QTimer
+import threading
+import numpy as np
+import sounddevice as sd
 import random
 
 class UniversalGauge(QWidget):
@@ -126,21 +129,70 @@ class WaterLevelGauge(QWidget):
         painter.drawText(0, 10, w, 20, Qt.AlignmentFlag.AlignCenter, self.title)
 
 class Annunciator(QLabel):
-    def __init__(self, text, alert_color="red"):
+    def __init__(self, text, alert_color="red", persistent=True, sound_freq=None):
         super().__init__(text)
         self.alert_color = alert_color
         self.active = False
+        self.needs_ack = False
+        self.blink = False
+        self.persistent = persistent
+        self.sound_freq = sound_freq
         self.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.setFixedSize(120, 40)
         self.update_style()
+        
+        # sound loop
+        self.sound_timer = QTimer()
+        self.sound_timer.timeout.connect(self._sound_if_active)
+        self.sound_timer.start(500)  # beep every 500 ms
+
+    def _sound_if_active(self):
+        if self.active and self.sound_freq:
+            self.play_sound(self.sound_freq)
 
     def set_state(self, active):
+        """Set alarm state."""
+        if self.persistent:
+            if active and not self.active:
+                self.needs_ack = True
         self.active = active
+
         self.update_style()
 
+    def acknowledge(self):
+        self.needs_ack = False
+        self.update_style()
+
+    def toggle_blink(self):
+        if self.persistent and self.active:
+            self.blink = not self.blink
+        else:
+            self.blink = False
+        self.update_style()
+
+    def play_sound(self, freq, duration=0.2, volume=0.2):
+        def _beep():
+            fs = 44100
+            t = np.linspace(0, duration, int(fs*duration), endpoint=False)
+            wave = volume * np.sin(2 * np.pi * freq * t).astype(np.float32)
+            sd.play(wave, fs)
+            sd.wait()
+        threading.Thread(target=_beep, daemon=True).start()
+
     def update_style(self):
-        bg = self.alert_color if self.active else "#333333"
-        fg = "white" if self.active else "#666666"
+        if not self.persistent:
+            bg = self.alert_color if self.active else "#333333"
+            fg = "white" if self.active else "#666666"
+        elif self.active:
+            bg = self.alert_color if self.blink else "#333333"
+            fg = "white"
+        elif self.needs_ack:
+            bg = self.alert_color
+            fg = "white"
+        else:
+            bg = "#333333"
+            fg = "#666666"
+
         self.setStyleSheet(f"""
             background-color: {bg};
             color: {fg};
@@ -171,6 +223,14 @@ class HydroSimulator(QMainWindow):
         self.background_rpm = 0.0
         self.power = 0
         self.turbine_inflow_variation = 0
+        self.damage = 0
+        # Set sound
+        self.turbine_phase = 0.0
+        self.SAMPLE_RATE = 44100
+        self.turbine_phase_hum = 0.0
+        self.turbine_phase_whirr = 0.0
+        self.stream = sd.OutputStream(channels=1, callback=self.sound_callback, samplerate=self.SAMPLE_RATE)
+        self.stream.start()
 
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
@@ -181,13 +241,15 @@ class HydroSimulator(QMainWindow):
         # -----------------------------------------------------------------------------------------------------------
         # Create layout
         annunc_layout = QHBoxLayout()
-        self.trip_alarm = Annunciator("TRIP", "red")
-        self.alarm_overload = Annunciator("OVERLOAD", "red")
-        self.alarm_low_water = Annunciator("LOW WATER", "orange")
-        self.high_rpm = Annunciator("HIGH RPM", "yellow")
-        self.sync_ready = Annunciator("SYNC READY", "green")
-        self.reverse_power = Annunciator("REVERSE POWER", "red")
-        self.high_acceleration = Annunciator("HIGH ACCEL.", "red")
+        self.trip_alarm = Annunciator("TRIP", "red", persistent=True, sound_freq=440)  # A4
+        self.alarm_overload = Annunciator("OVERLOAD", "red", persistent=True, sound_freq=550)  # C#5
+        self.alarm_low_water = Annunciator("LOW WATER", "orange", persistent=True, sound_freq=330)  # E4
+        self.high_rpm = Annunciator("HIGH RPM", "yellow", persistent=True, sound_freq=660)  # E5
+        self.high_acceleration = Annunciator("HIGH ACCEL.", "red", persistent=True, sound_freq=770)  # G5
+        self.reverse_power = Annunciator("REVERSE POWER", "red", persistent=True, sound_freq=880)  # A5
+        # sync_ready does not have a persistent sound
+        self.sync_ready = Annunciator("SYNC READY", "green", persistent=False)
+
         annunc_layout.addWidget(self.trip_alarm)
         annunc_layout.addWidget(self.alarm_low_water)
         annunc_layout.addWidget(self.high_rpm)
@@ -235,14 +297,17 @@ class HydroSimulator(QMainWindow):
         self.btn_emergency = CustomButton("TRIP", "#800")
         self.btn_reset = CustomButton("RESET TRIP", "#800")
         self.sync_button = CustomButton("SYNC", "#800")
+        self.ack_button = CustomButton("ACKNOWLEDGE", "#444")
         controls_layout.addWidget(self.btn_emergency)
         controls_layout.addWidget(self.btn_reset)
+        controls_layout.addWidget(self.ack_button)
         controls_layout.addWidget(self.sync_button)
         main_layout.addLayout(controls_layout)
 
         # link buttons to functions
         self.btn_emergency.clicked.connect(self.handle_emergency_stop)
         self.btn_reset.clicked.connect(self.handle_reset)
+        self.ack_button.clicked.connect(self.acknowledge_alarms)
         self.sync_button.clicked.connect(lambda: self.synchronise())
 
 
@@ -279,10 +344,24 @@ class HydroSimulator(QMainWindow):
         self.timer.start(50)
 
         self.water_timer = QTimer()
-        self.water_timer.timeout.connect(self.update_water_level)
+        self.water_timer.timeout.connect(self.update_water_flow)
         self.water_timer.start(100)
+
+        # Blinking timer for annunciators
+        self.blink_timer = QTimer()
+        self.blink_timer.timeout.connect(self.blink_alarms)
+        self.blink_timer.start(500)  # 500 ms toggle
         
         self.sim_time = 0
+
+
+    # -----------------------------------------------------------------------------------------------------------
+    # Annunciator function
+    # -----------------------------------------------------------------------------------------------------------
+    def blink_alarms(self):
+        for alarm in [self.trip_alarm, self.alarm_low_water, self.high_rpm, 
+                    self.high_acceleration, self.alarm_overload, self.reverse_power]:
+            alarm.toggle_blink()
 
     
     # -----------------------------------------------------------------------------------------------------------
@@ -294,8 +373,11 @@ class HydroSimulator(QMainWindow):
         elif (self.phase_diff < 10) or (self.phase_diff > 350) and self.sync == False:
             self.sync = True
             self.background_rpm = self.current_rpm
+            if self.phase_diff > 5 or self.phase_diff < 355:
+                self.damage += abs(self.phase_diff-180)
         else:
             self.sync = False
+            self.damage += abs(self.phase_diff-180)
         
     def set_gate_direction(self, direction):
         if not self.is_emergency:
@@ -310,12 +392,22 @@ class HydroSimulator(QMainWindow):
     def handle_reset(self):
         self.is_emergency = False
         self.trip_alarm.set_state(False)
+        self.trip_alarm.acknowledge()
+    
+    
+    def acknowledge_alarms(self):
+        self.alarm_low_water.acknowledge()
+        self.high_rpm.acknowledge()
+        self.high_acceleration.acknowledge()
+        self.alarm_overload.acknowledge()
+        self.sync_ready.acknowledge()
+        self.reverse_power.acknowledge()
 
     # -----------------------------------------------------------------------------------------------------------
     # Simulation loop slow
     # -----------------------------------------------------------------------------------------------------------
 
-    def update_water_level(self):
+    def update_water_flow(self):
         min_inflow = 70.0
         max_inflow = 100.0
 
@@ -340,6 +432,8 @@ class HydroSimulator(QMainWindow):
     # -----------------------------------------------------------------------------------------------------------
     # Simulation loop fast
     # -----------------------------------------------------------------------------------------------------------
+
+
 
     def update_gate_pos(self):
         if not self.is_emergency and self.gate_direction != 0:
@@ -436,6 +530,34 @@ class HydroSimulator(QMainWindow):
         self.update_power_output()
         self.trigger_alarms()
 
+
+    # -----------------------------------------------------------------------------------------------------------
+    # Turbine sound loop
+    # -----------------------------------------------------------------------------------------------------------
+    def sound_callback(self, outdata, frames, time, status):
+        rpm = self.current_rpm
+        if rpm < 1:
+            outdata.fill(0)
+            return
+
+        # volume
+        min_rpm = 1
+        max_rpm = 100
+        max_volume = 0.2
+        volume = max(0.0, min(max_volume, ((rpm - min_rpm) / (max_rpm - min_rpm)) * max_volume))
+
+        # frequency
+        base_freq = 50 + (rpm / 6000) * 500
+        phase_inc_hum = 2 * np.pi * base_freq / self.SAMPLE_RATE
+        phase_inc_whirr = 2 * np.pi * base_freq * 3 / self.SAMPLE_RATE
+        chunk = np.zeros(frames, dtype=np.float32)
+        for i in range(frames):
+            chunk[i] = volume * (np.sin(self.turbine_phase_hum) + 0.3 * np.sin(self.turbine_phase_whirr))
+            self.turbine_phase_hum += phase_inc_hum
+            self.turbine_phase_whirr += phase_inc_whirr
+        self.turbine_phase_hum %= 2 * np.pi
+        self.turbine_phase_whirr %= 2 * np.pi
+        outdata[:] = chunk.reshape(-1, 1)
         
 
 
