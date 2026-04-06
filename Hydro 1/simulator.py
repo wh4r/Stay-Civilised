@@ -388,6 +388,7 @@ class HydroSimulator(QMainWindow):
         self.trip_alarm.set_state(True)
         self.gate_opening = 0
         self.gate_direction = 0
+        self.sync = False
 
     def handle_reset(self):
         self.is_emergency = False
