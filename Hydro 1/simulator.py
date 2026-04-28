@@ -19,6 +19,7 @@ class UniversalGauge(QWidget):
         self.start_angle = 240  # start position
         self.span_angle = 240   # arc length
 
+    # Changes the values of the gauge
     def configure(self, min_val, max_val, unit, title, start_angle=240, span_angle=240, needle_color="red"):
         self.min_val = min_val
         self.max_val = max_val
@@ -29,10 +30,12 @@ class UniversalGauge(QWidget):
         self.needle_color = QColor(needle_color)
         self.update()
 
+    #Sets the value to be displated
     def set_value(self, val):
         self.value = max(self.min_val, min(self.max_val, val))
         self.update()
 
+    # Draws the gauge
     def paintEvent(self, event):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
@@ -80,6 +83,7 @@ class UniversalGauge(QWidget):
             painter.drawText(-50, 60, 100, 20, Qt.AlignmentFlag.AlignCenter, self.title)
 
 class CustomButton(QPushButton):
+    # Draws a button (link to function using lambda)
     def __init__(self, text, color="#444"):
         super().__init__(text)
         self.setStyleSheet(f"""
@@ -100,6 +104,7 @@ class CustomButton(QPushButton):
         """)
 
 class WaterLevelGauge(QWidget):
+    # Special vertical gauge for the water level display
     def __init__(self, title, parent=None):
         super().__init__(parent)
         self.setMinimumWidth(80)
@@ -146,10 +151,12 @@ class Annunciator(QLabel):
         self.sound_timer.timeout.connect(self._sound_if_active)
         self.sound_timer.start(500)  # beep every 500 ms
 
+    # Plats sound
     def _sound_if_active(self):
         if self.active and self.sound_freq:
             self.play_sound(self.sound_freq)
 
+    # Run to turn on/off the annunciator
     def set_state(self, active):
         """Set alarm state."""
         if self.persistent:
@@ -159,10 +166,12 @@ class Annunciator(QLabel):
 
         self.update_style()
 
+    # Resets annunciator
     def acknowledge(self):
         self.needs_ack = False
         self.update_style()
 
+    # Blinks the annunciator
     def toggle_blink(self):
         if self.persistent and self.active:
             self.blink = not self.blink
@@ -170,6 +179,7 @@ class Annunciator(QLabel):
             self.blink = False
         self.update_style()
 
+    # Plays the sound at the given frequency
     def play_sound(self, freq, duration=0.2, volume=0.2):
         def _beep():
             fs = 44100
@@ -179,6 +189,7 @@ class Annunciator(QLabel):
             sd.wait()
         threading.Thread(target=_beep, daemon=True).start()
 
+    # Updates the style of the annunciator
     def update_style(self):
         if not self.persistent:
             bg = self.alert_color if self.active else "#333333"
@@ -201,6 +212,9 @@ class Annunciator(QLabel):
             border-radius: 4px;
         """)
 
+# ===========================================================================================================
+# MAIN CLASS
+# ===========================================================================================================
 class HydroSimulator(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -244,7 +258,7 @@ class HydroSimulator(QMainWindow):
         self.trip_alarm = Annunciator("TRIP", "red", persistent=True, sound_freq=440)  # A4
         self.alarm_overload = Annunciator("OVERLOAD", "red", persistent=True, sound_freq=550)  # C#5
         self.alarm_low_water = Annunciator("LOW WATER", "orange", persistent=True, sound_freq=330)  # E4
-        self.high_rpm = Annunciator("HIGH RPM", "yellow", persistent=True, sound_freq=660)  # E5
+        self.high_rpm = Annunciator("HIGH RPM", "orange", persistent=True, sound_freq=660)  # E5
         self.high_acceleration = Annunciator("HIGH ACCEL.", "red", persistent=True, sound_freq=770)  # G5
         self.reverse_power = Annunciator("REVERSE POWER", "red", persistent=True, sound_freq=880)  # A5
         # sync_ready does not have a persistent sound
@@ -260,21 +274,17 @@ class HydroSimulator(QMainWindow):
         main_layout.addLayout(annunc_layout)
 
         # -----------------------------------------------------------------------------------------------------------
-        # Middle Section: Gauges
+        # Middle Section (1): Operation gauges
         # -----------------------------------------------------------------------------------------------------------
         # Gauges layout
         gauges_layout = QHBoxLayout()
         self.level_gauge = WaterLevelGauge("Forebay Level")
-        self.inflow_guage = UniversalGauge("Water Inflow", 0, 100, "%")
-        self.outflow_guage = UniversalGauge("Water Outflow", 0, 100, "%")
         self.rpm_gauge = UniversalGauge("Turbine RPM", 0, 1000, "RPM")
         self.freq_gauge = UniversalGauge("Frequency", 45, 65, "Hz")
         self.gate_guage = UniversalGauge("Gate", 0, 100, "%")
         self.synchro = UniversalGauge("Synchroscope", 0, 360, "")
         self.synchro.configure(0, 360, "", "Synchroscope", start_angle=0, span_angle=360, needle_color="yellow")
         self.power_gauge = UniversalGauge("Power", -10, 100, "MW")
-        gauges_layout.addWidget(self.inflow_guage)
-        gauges_layout.addWidget(self.outflow_guage)
         gauges_layout.addWidget(self.level_gauge)
         gauges_layout.addWidget(self.rpm_gauge)
         gauges_layout.addWidget(self.freq_gauge)
@@ -288,6 +298,22 @@ class HydroSimulator(QMainWindow):
         gauges_layout.addLayout(sync_container)
 
         main_layout.addLayout(gauges_layout)
+
+
+        # -----------------------------------------------------------------------------------------------------------
+        # Middle Section (2): Debug gauges
+        # -----------------------------------------------------------------------------------------------------------
+        debug_gauges_layout = QHBoxLayout()
+        self.inflow_guage = UniversalGauge("Water Inflow", 0, 100, "%")
+        self.outflow_guage = UniversalGauge("Water Outflow", 0, 100, "%")
+        self.damage_guage = UniversalGauge("Damage", 0, 100, "%")
+        debug_gauges_layout.addWidget(self.inflow_guage)
+        debug_gauges_layout.addWidget(self.outflow_guage)
+        debug_gauges_layout.addWidget(self.damage_guage)
+
+        main_layout.addLayout(debug_gauges_layout)
+
+
 
         # -----------------------------------------------------------------------------------------------------------
         # Bottom Section (1): Dangerous controls
@@ -453,7 +479,11 @@ class HydroSimulator(QMainWindow):
         if not self.sync:
             # physics based on gate opening (ADD WATER LEVEL MULTIPLIER)
             target_rpm = (self.gate_opening * 12.0) if not self.is_emergency else 0.0
-            self.high_acceleration.set_state(abs(target_rpm-self.current_rpm) > 100)
+            if abs(target_rpm-self.current_rpm) > 100:
+                self.high_acceleration.set_state(True)
+                self.add_damage()
+            else:
+                self.high_acceleration.set_state(False)
             # Smoothly move current RPM to target
             self.current_rpm += (target_rpm - self.current_rpm) * 0.005 + (math.sin(20*self.sim_time)*self.turbine_inflow_variation*0.03)
                                 
@@ -517,8 +547,19 @@ class HydroSimulator(QMainWindow):
         self.alarm_low_water.set_state(self.water_level < 70)
         self.alarm_overload.set_state(self.current_rpm > 600)
         self.high_rpm.set_state(self.current_rpm > 550)
+        if self.water_level < 70 or self.current_rpm > 600 or self.current_rpm > 550:
+            self.add_damage()
+
+    def update_debug_gauges(self):
+        self.damage_guage.set_value(self.damage)
         
-        
+    def add_damage(self):
+        self.damage+=0.1 if self.damage < 100 else 0
+
+    def damage_system(self):
+        if self.damage>80 and random.randint(0,50):
+            self.is_emergency = True
+            self.current_rpm=0
 
     def update_simulation(self): # MAIN FUNCTION
         self.sim_time += 0.05
@@ -530,6 +571,10 @@ class HydroSimulator(QMainWindow):
         self.update_synchroscope()
         self.update_power_output()
         self.trigger_alarms()
+        self.damage_system()
+        self.update_debug_gauges()
+
+
 
 
     # -----------------------------------------------------------------------------------------------------------
