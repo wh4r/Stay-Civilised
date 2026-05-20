@@ -410,11 +410,11 @@ class HydroSimulator(QMainWindow):
     def synchronise(self):
         if self.sync == True:
             self.sync = False
-        elif (self.phase_diff < 10) or (self.phase_diff > 350) and self.sync == False:
+        elif (self.phase_diff < 3) or (self.phase_diff > 357) and self.sync == False and self.current_rpm > 2800 and self.current_rpm < 3200:
             self.sync = True
             self.background_rpm = self.current_rpm
-            if self.phase_diff > 5 or self.phase_diff < 355:
-                self.damage += abs(self.phase_diff-180)
+            if self.phase_diff > 2 or self.phase_diff < 358:
+                self.damage += 1
         else:
             self.sync = False
             self.damage += abs(self.phase_diff-180)
@@ -478,12 +478,12 @@ class HydroSimulator(QMainWindow):
 
     def update_gate_pos(self):
         if not self.is_emergency and self.gate_direction != 0:
-            self.gate_opening = max(0, min(100, self.gate_opening + (self.gate_direction * 0.1)))
-            self.turbine_inflow_variation+=0.1
+            self.gate_opening = max(0, min(100, self.gate_opening + (self.gate_direction * 0.01)))
+            self.turbine_inflow_variation+=0.1 if self.turbine_inflow_variation <= self.current_rpm/200 else 0
         self.gate_guage.set_value(self.gate_opening)
 
     def update_turbine_inflow(self):
-        if self.turbine_inflow_variation > 0.09 :
+        if self.turbine_inflow_variation > 0.09:
             self.turbine_inflow_variation-=0.02
         else:
             self.turbine_inflow_variation = 0
@@ -492,23 +492,24 @@ class HydroSimulator(QMainWindow):
     def update_rpm(self):
         if not self.sync:
             # physics based on gate opening (ADD WATER LEVEL MULTIPLIER)
-            target_rpm = (self.gate_opening * 12.0) if not self.is_emergency else 0.0
-            if abs(target_rpm-self.current_rpm) > 100:
+            target_rpm = (self.gate_opening * 12.0 * 6) if not self.is_emergency else 0.0
+            if target_rpm-self.current_rpm > 100:
                 self.high_acceleration.set_state(True)
                 self.add_damage()
             else:
                 self.high_acceleration.set_state(False)
             # Smoothly move current RPM to target
-            self.current_rpm += (target_rpm - self.current_rpm) * 0.005 + (math.sin(20*self.sim_time)*self.turbine_inflow_variation*0.03)
+            self.current_rpm += (target_rpm - self.current_rpm) * 0.01 + (math.sin(random.randint(10,20)*self.sim_time)*self.turbine_inflow_variation*0.03)
+            print(self.turbine_inflow_variation)
                                 
         else:
-            target_rpm = 500
+            target_rpm = 3000
             self.current_rpm += (target_rpm - self.current_rpm) * 0.1
             target_rpm = (self.gate_opening * 12.0) if not self.is_emergency else 0.0
             # Simplified RPM
             self.background_rpm += (target_rpm - self.background_rpm) * 0.005
         
-        self.rpm_gauge.set_value(self.current_rpm*6)
+        self.rpm_gauge.set_value(self.current_rpm)
     
     def update_water_level(self):
         water_outflow = self.gate_opening
@@ -525,7 +526,7 @@ class HydroSimulator(QMainWindow):
         if not self.sync:
             dt = 0.05
             grid_freq = 50.0  
-            freq = (self.current_rpm / 10.0) + (0.1 * math.sin(self.sim_time))
+            freq = (self.current_rpm / 60.0) + (0.1 * math.sin(self.sim_time))
             gen_freq = freq
             # hz to degrees
             self.grid_phase = (self.grid_phase + grid_freq * 360 * dt) % 360
@@ -547,7 +548,7 @@ class HydroSimulator(QMainWindow):
     def update_power_output(self):
         # caltulate power output (max rpm 1200)
         if self.sync:
-            self.power = ((self.background_rpm-500)/700)*100
+            self.power = ((self.background_rpm-3000)/700)*100
             if self.power < 0:
                 self.reverse_power.set_state(True)
             else:
@@ -558,10 +559,10 @@ class HydroSimulator(QMainWindow):
         self.power_gauge.set_value(self.power)
     
     def trigger_alarms(self):
-        self.alarm_low_water.set_state(self.water_level < 70)
-        self.alarm_overload.set_state(self.current_rpm > 600)
-        self.high_rpm.set_state(self.current_rpm > 550)
-        if self.water_level < 70 or self.current_rpm > 600 or self.current_rpm > 550:
+        self.alarm_low_water.set_state(self.water_level < 50)
+        self.alarm_overload.set_state(self.current_rpm > 3300)
+        self.high_rpm.set_state(self.current_rpm > 3100)
+        if self.water_level < 50 or self.current_rpm > 3100:
             self.add_damage()
 
     def update_debug_gauges(self):
