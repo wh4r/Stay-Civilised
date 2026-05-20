@@ -251,12 +251,10 @@ class HydroSimulator(QMainWindow):
         main_layout = QVBoxLayout(central_widget)
 
         # -----------------------------------------------------------------------------------------------------------
-        # Top Section: Annunciators
+        # Top Section (1): Important annunciators
         # -----------------------------------------------------------------------------------------------------------
         # Create layout
         annunc_layout = QHBoxLayout()
-        self.trip_alarm = Annunciator("TRIP", "red", persistent=True, sound_freq=440)  # A4
-        self.alarm_overload = Annunciator("OVERLOAD", "red", persistent=True, sound_freq=550)  # C#5
         self.alarm_low_water = Annunciator("LOW WATER", "orange", persistent=True, sound_freq=330)  # E4
         self.high_rpm = Annunciator("HIGH RPM", "orange", persistent=True, sound_freq=660)  # E5
         self.high_acceleration = Annunciator("HIGH ACCEL.", "red", persistent=True, sound_freq=770)  # G5
@@ -264,14 +262,30 @@ class HydroSimulator(QMainWindow):
         # sync_ready does not have a persistent sound
         self.sync_ready = Annunciator("SYNC READY", "green", persistent=False)
 
-        annunc_layout.addWidget(self.trip_alarm)
         annunc_layout.addWidget(self.alarm_low_water)
         annunc_layout.addWidget(self.high_rpm)
         annunc_layout.addWidget(self.high_acceleration)
-        annunc_layout.addWidget(self.alarm_overload)
         annunc_layout.addWidget(self.sync_ready)
         annunc_layout.addWidget(self.reverse_power)
         main_layout.addLayout(annunc_layout)
+
+        # -----------------------------------------------------------------------------------------------------------
+        # Top Section (2): Important annunciators
+        # -----------------------------------------------------------------------------------------------------------
+        # Create layout
+        annunc_layout_2 = QHBoxLayout()
+        self.trip_alarm = Annunciator("TRIP", "red", persistent=True, sound_freq=440)  # A4
+        self.alarm_overload = Annunciator("OVERLOAD", "red", persistent=True, sound_freq=550)  # C#5
+        self.malfunction = Annunciator("MALF.", "red", persistent=True, sound_freq=622) # D#5
+        self.placeholder_1 = Annunciator(".", "gray", persistent=False)
+        self.placeholder_2 = Annunciator(".", "gray", persistent=False)
+
+        annunc_layout_2.addWidget(self.trip_alarm)
+        annunc_layout_2.addWidget(self.alarm_overload)
+        annunc_layout_2.addWidget(self.malfunction)
+        annunc_layout_2.addWidget(self.placeholder_1)
+        annunc_layout_2.addWidget(self.placeholder_2)
+        main_layout.addLayout(annunc_layout_2)
 
         # -----------------------------------------------------------------------------------------------------------
         # Middle Section (1): Operation gauges
@@ -279,7 +293,7 @@ class HydroSimulator(QMainWindow):
         # Gauges layout
         gauges_layout = QHBoxLayout()
         self.level_gauge = WaterLevelGauge("Forebay Level")
-        self.rpm_gauge = UniversalGauge("Turbine RPM", 0, 1000, "RPM")
+        self.rpm_gauge = UniversalGauge("Turbine RPM", 0, 4000, "RPM")
         self.freq_gauge = UniversalGauge("Frequency", 45, 65, "Hz")
         self.gate_guage = UniversalGauge("Gate", 0, 100, "%")
         self.synchro = UniversalGauge("Synchroscope", 0, 360, "")
@@ -494,7 +508,7 @@ class HydroSimulator(QMainWindow):
             # Simplified RPM
             self.background_rpm += (target_rpm - self.background_rpm) * 0.005
         
-        self.rpm_gauge.set_value(self.current_rpm)
+        self.rpm_gauge.set_value(self.current_rpm*6)
     
     def update_water_level(self):
         water_outflow = self.gate_opening
@@ -559,6 +573,7 @@ class HydroSimulator(QMainWindow):
     def damage_system(self):
         if self.damage>80 and random.randint(0,50):
             self.is_emergency = True
+            self.malfunction.set_state(True)
             self.current_rpm=0
 
     def update_simulation(self): # MAIN FUNCTION
