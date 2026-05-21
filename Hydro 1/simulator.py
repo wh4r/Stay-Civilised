@@ -105,9 +105,10 @@ class CustomButton(QPushButton):
 
 class WaterLevelGauge(QWidget):
     # Special vertical gauge for the water level display
-    def __init__(self, title, parent=None):
+    def __init__(self, title, color = [0,120,255], parent=None):
         super().__init__(parent)
         self.setMinimumWidth(80)
+        self.color = color
         self.level = 50.0  # percentage
         self.title = title
 
@@ -125,7 +126,7 @@ class WaterLevelGauge(QWidget):
 
         # water
         fill_h = (self.level / 100.0) * (h - 80)
-        painter.setBrush(QColor(0, 120, 255))
+        painter.setBrush(QColor(self.color[0], self.color[1], self.color[2]))
         painter.drawRect(20, int(h - 40 - fill_h), w-40, int(fill_h))
         
         # text
@@ -238,6 +239,12 @@ class HydroSimulator(QMainWindow):
         self.power = 0
         self.turbine_inflow_variation = 0
         self.damage = 0
+        self.flow_to_turbine = [0 for _ in range(50)]
+        self.turbine_water_level = 0
+        self.bypass_direction = 0
+        self.bypass_opening = 0
+        self.drain_direction = 0
+        self.drain_opening = 0
         # Set sound
         self.turbine_phase = 0.0
         self.SAMPLE_RATE = 44100
@@ -255,6 +262,7 @@ class HydroSimulator(QMainWindow):
         # -----------------------------------------------------------------------------------------------------------
         # Create layout
         annunc_layout = QHBoxLayout()
+        self.alarm_interlock = Annunciator("INTERLOCK", "red", persistent=True, sound_freq=330)  # E4
         self.alarm_low_water = Annunciator("LOW WATER", "orange", persistent=True, sound_freq=330)  # E4
         self.high_rpm = Annunciator("HIGH RPM", "orange", persistent=True, sound_freq=660)  # E5
         self.high_acceleration = Annunciator("HIGH ACCEL.", "red", persistent=True, sound_freq=770)  # G5
@@ -262,6 +270,7 @@ class HydroSimulator(QMainWindow):
         # sync_ready does not have a persistent sound
         self.sync_ready = Annunciator("SYNC READY", "green", persistent=False)
 
+        annunc_layout.addWidget(self.alarm_interlock)
         annunc_layout.addWidget(self.alarm_low_water)
         annunc_layout.addWidget(self.high_rpm)
         annunc_layout.addWidget(self.high_acceleration)
@@ -279,12 +288,14 @@ class HydroSimulator(QMainWindow):
         self.malfunction = Annunciator("MALF.", "red", persistent=True, sound_freq=622) # D#5
         self.placeholder_1 = Annunciator(".", "gray", persistent=False)
         self.placeholder_2 = Annunciator(".", "gray", persistent=False)
+        self.placeholder_3 = Annunciator(".", "gray", persistent=False)
 
         annunc_layout_2.addWidget(self.trip_alarm)
         annunc_layout_2.addWidget(self.alarm_overload)
         annunc_layout_2.addWidget(self.malfunction)
         annunc_layout_2.addWidget(self.placeholder_1)
         annunc_layout_2.addWidget(self.placeholder_2)
+        annunc_layout_2.addWidget(self.placeholder_3)
         main_layout.addLayout(annunc_layout_2)
 
         # -----------------------------------------------------------------------------------------------------------
@@ -293,6 +304,9 @@ class HydroSimulator(QMainWindow):
         # Gauges layout
         gauges_layout = QHBoxLayout()
         self.level_gauge = WaterLevelGauge("Forebay Level")
+        self.turbine_level_gauge = WaterLevelGauge("Turbine level")
+        self.drain_gauge = WaterLevelGauge("Drain", [255,0,100])
+        self.bypass_gauge = WaterLevelGauge("Bypasss", [255,0,100])
         self.rpm_gauge = UniversalGauge("Turbine RPM", 0, 4000, "RPM")
         self.freq_gauge = UniversalGauge("Frequency", 45, 65, "Hz")
         self.gate_guage = UniversalGauge("Gate", 0, 100, "%")
@@ -300,6 +314,9 @@ class HydroSimulator(QMainWindow):
         self.synchro.configure(0, 360, "", "Synchroscope", start_angle=0, span_angle=360, needle_color="yellow")
         self.power_gauge = UniversalGauge("Power", -10, 100, "MW")
         gauges_layout.addWidget(self.level_gauge)
+        gauges_layout.addWidget(self.turbine_level_gauge)
+        gauges_layout.addWidget(self.drain_gauge)
+        gauges_layout.addWidget(self.bypass_gauge)
         gauges_layout.addWidget(self.rpm_gauge)
         gauges_layout.addWidget(self.freq_gauge)
         gauges_layout.addWidget(self.gate_guage)
@@ -374,6 +391,34 @@ class HydroSimulator(QMainWindow):
         self.decrease_gate.clicked.connect(lambda: self.set_gate_direction(-1))
         self.decrease_gate_2.clicked.connect(lambda: self.set_gate_direction(-5))
         self.stop_gate.clicked.connect(lambda: self.set_gate_direction(0))
+
+
+        # -----------------------------------------------------------------------------------------------------------
+        # Bottom Section (3): Alt water flow
+        # -----------------------------------------------------------------------------------------------------------
+        # Buttons layout
+        bypass_layout = QHBoxLayout()
+        self.decrease_drain = CustomButton("-")
+        self.stop_drain = CustomButton("DRAIN STOP")
+        self.increase_drain = CustomButton("+")
+        self.decrease_bypass = CustomButton("-")
+        self.stop_bypass = CustomButton("BYPASS STOP")
+        self.increase_bypass = CustomButton("+")
+        bypass_layout.addWidget(self.decrease_drain)
+        bypass_layout.addWidget(self.stop_drain)
+        bypass_layout.addWidget(self.increase_drain)
+        bypass_layout.addWidget(self.decrease_bypass)
+        bypass_layout.addWidget(self.stop_bypass)
+        bypass_layout.addWidget(self.increase_bypass)
+        main_layout.addLayout(bypass_layout)
+
+        # Link to functions
+        self.decrease_drain.clicked.connect(lambda: self.set_drain_direction(-1))
+        self.stop_drain.clicked.connect(lambda: self.set_drain_direction(0))
+        self.increase_drain.clicked.connect(lambda: self.set_drain_direction(1))
+        self.decrease_bypass.clicked.connect(lambda: self.set_bypass_direction(-1))
+        self.stop_bypass.clicked.connect(lambda: self.set_bypass_direction(0))
+        self.increase_bypass.clicked.connect(lambda: self.set_bypass_direction(1))
         
 
         # -----------------------------------------------------------------------------------------------------------
@@ -384,7 +429,7 @@ class HydroSimulator(QMainWindow):
         self.timer.start(50)
 
         self.water_timer = QTimer()
-        self.water_timer.timeout.connect(self.update_water_flow)
+        self.water_timer.timeout.connect(self.sim_loop_slow_main)
         self.water_timer.start(100)
 
         # Blinking timer for annunciators
@@ -400,7 +445,7 @@ class HydroSimulator(QMainWindow):
     # -----------------------------------------------------------------------------------------------------------
     def blink_alarms(self):
         for alarm in [self.trip_alarm, self.alarm_low_water, self.high_rpm, 
-                    self.high_acceleration, self.alarm_overload, self.reverse_power]:
+                    self.high_acceleration, self.alarm_overload, self.reverse_power, self.alarm_interlock]:
             alarm.toggle_blink()
 
     
@@ -423,6 +468,12 @@ class HydroSimulator(QMainWindow):
         if not self.is_emergency:
             self.gate_direction = direction
 
+    def set_drain_direction(self, direction):
+        self.drain_direction = direction
+
+    def set_bypass_direction(self, direction):
+        self.bypass_direction = direction
+
     def handle_emergency_stop(self):
         self.is_emergency = True
         self.trip_alarm.set_state(True)
@@ -443,6 +494,7 @@ class HydroSimulator(QMainWindow):
         self.alarm_overload.acknowledge()
         self.sync_ready.acknowledge()
         self.reverse_power.acknowledge()
+        self.alarm_interlock.acknowledge()
 
     # -----------------------------------------------------------------------------------------------------------
     # Simulation loop slow
@@ -468,6 +520,25 @@ class HydroSimulator(QMainWindow):
             self.water_inflow += spike
 
         self.water_inflow = max(min_inflow, min(max_inflow, self.water_inflow))
+    
+    def update_flow_to_turbine(self):
+        self.flow_to_turbine[len(self.flow_to_turbine)-1] = self.gate_opening
+        for i in range(0,len(self.flow_to_turbine)-1):
+            self.flow_to_turbine[i] += (self.flow_to_turbine[i+1]-self.flow_to_turbine[i])
+
+    def update_drain_bypass(self):
+        if self.current_rpm < 10:
+            self.alarm_interlock.set_state(False)
+            self.turbine_water_level += (self.bypass_opening*.01)-(self.drain_opening*.01)
+        elif self.bypass_opening > 0 or self.drain_opening > 0:
+            self.alarm_interlock.set_state(True)
+        else:
+            self.alarm_interlock.set_state(False)
+
+    def sim_loop_slow_main(self):
+        self.update_water_flow()
+        self.update_flow_to_turbine()
+        self.update_drain_bypass()
 
 
     # -----------------------------------------------------------------------------------------------------------
@@ -482,6 +553,12 @@ class HydroSimulator(QMainWindow):
             self.turbine_inflow_variation+=0.1 if self.turbine_inflow_variation <= self.current_rpm/200 else 0
         self.gate_guage.set_value(self.gate_opening)
 
+    def update_drain_bypass_pos(self):
+        self.drain_opening = max(0, min(100, self.drain_opening + (self.drain_direction)))
+        self.bypass_opening = max(0, min(100, self.bypass_opening + (self.bypass_direction)))
+        self.drain_gauge.set_level(self.drain_opening)
+        self.bypass_gauge.set_level(self.bypass_opening)
+
     def update_turbine_inflow(self):
         if self.turbine_inflow_variation > 0.09:
             self.turbine_inflow_variation-=0.02
@@ -492,7 +569,7 @@ class HydroSimulator(QMainWindow):
     def update_rpm(self):
         if not self.sync:
             # physics based on gate opening (ADD WATER LEVEL MULTIPLIER)
-            target_rpm = (self.gate_opening * 12.0 * 6) if not self.is_emergency else 0.0
+            target_rpm = (self.flow_to_turbine[0] * 12.0 * 6) if not self.is_emergency else 0.0
             if target_rpm-self.current_rpm > 100:
                 self.high_acceleration.set_state(True)
                 self.add_damage()
@@ -500,12 +577,11 @@ class HydroSimulator(QMainWindow):
                 self.high_acceleration.set_state(False)
             # Smoothly move current RPM to target
             self.current_rpm += (target_rpm - self.current_rpm) * 0.01 + (math.sin(random.randint(10,20)*self.sim_time)*self.turbine_inflow_variation*0.03)
-            print(self.turbine_inflow_variation)
                                 
         else:
             target_rpm = 3000
             self.current_rpm += (target_rpm - self.current_rpm) * 0.1
-            target_rpm = (self.gate_opening * 12.0) if not self.is_emergency else 0.0
+            target_rpm = (self.flow_to_turbine[0] * 12.0) if not self.is_emergency else 0.0
             # Simplified RPM
             self.background_rpm += (target_rpm - self.background_rpm) * 0.005
         
@@ -577,6 +653,13 @@ class HydroSimulator(QMainWindow):
             self.malfunction.set_state(True)
             self.current_rpm=0
 
+    def turbine_level(self):
+        self.turbine_level_gauge.set_level(self.turbine_water_level)
+        if self.turbine_water_level < 100:
+            if self.flow_to_turbine[0] >= 0.5:
+                self.damage += self.gate_opening*10
+                self.turbine_water_level=100
+
     def update_simulation(self): # MAIN FUNCTION
         self.sim_time += 0.05
         
@@ -589,6 +672,8 @@ class HydroSimulator(QMainWindow):
         self.trigger_alarms()
         self.damage_system()
         self.update_debug_gauges()
+        self.turbine_level()
+        self.update_drain_bypass_pos()
 
 
 
