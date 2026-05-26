@@ -10,21 +10,23 @@ class HydraulicsWindow(QWidget):
         self.engine = engine
         self.setWindowTitle("Hydraulic Systems")
         self.setStyleSheet("background-color: #1a1a1a; color: white;")
-        self.setFixedSize(500, 700)
+        self.setFixedSize(1000, 700)
 
         main_layout = QVBoxLayout()
         self.setLayout(main_layout)
 
-        main_layout.addWidget(QLabel("<h2>Hydraulics Panel</h2>", alignment=Qt.AlignmentFlag.AlignCenter))
+        main_layout.addWidget(QLabel("<h2>Hydraulic Systems</h2>", alignment=Qt.AlignmentFlag.AlignCenter))
 
         # --- Gauges ---
         gauge_layout = QHBoxLayout()
-        self.res_gauge_1 = UniversalGauge(title="Reservoir 1 pressure", unit="%") # Replace with actual values using multiplier
-        self.res_gauge_2 = UniversalGauge(title="Reserboir 2 pressure", unit="%")
-        self.res_temp_1 = UniversalGauge(title="Reservoir 1 temp", unit="°", min_val=20, max_val=50)
-        self.res_temp_1 = UniversalGauge(title="Reservoir 1 temp", unit="°", min_val=20, max_val=50)
+        self.res_gauge_1 = UniversalGauge(title="Res. 1 pressure", unit="%") # Replace with actual values using multiplier
+        self.res_gauge_2 = UniversalGauge(title="Res. 2 pressure", unit="%")
+        self.res_temp_1 = UniversalGauge(title="Res. 1 temp", unit="°", min_val=20, max_val=50)
+        self.res_temp_2 = UniversalGauge(title="Res. 1 temp", unit="°", min_val=20, max_val=50)
         gauge_layout.addWidget(self.res_gauge_1)
         gauge_layout.addWidget(self.res_gauge_2)
+        gauge_layout.addWidget(self.res_temp_1)
+        gauge_layout.addWidget(self.res_temp_2)
         main_layout.addLayout(gauge_layout)
         main_layout.addWidget(self.create_separator())
 
@@ -146,8 +148,16 @@ class HydraulicsWindow(QWidget):
         line.setStyleSheet("background-color: #444;")
         return line
 
-    def toggle_pre1(self): self.engine.pre1_on = not self.engine.pre1_on
-    def toggle_pre2(self): self.engine.pre2_on = not self.engine.pre2_on
+    def toggle_pre1(self):
+        if not self.engine.pre1_on and self.engine.ac_bus_a:
+            self.engine.pre1_on = True
+        else:
+            self.engine.pre1_on = False
+    def toggle_pre2(self):
+        if not self.engine.pre2_on and self.engine.ac_bus_b:
+            self.engine.pre2_on = True
+        else:
+            self.engine.pre2_on = False
 
     def blink_tick(self):
         if self.engine.pump1_state == 1:
@@ -183,7 +193,7 @@ class HydraulicsWindow(QWidget):
         # Selector styling
         self.btn_sel_1.setStyleSheet("background-color: #444;" if self.engine.pump_selector != 1 else "background-color: #0066cc;")
         self.btn_sel_2.setStyleSheet("background-color: #444;" if self.engine.pump_selector != 2 else "background-color: #0066cc;")
-        self.btn_sel_auto.setStyleSheet("background-color: #444;" if self.engine.pump_selector != 2 else "background-color: #0066cc;")
+        self.btn_sel_auto.setStyleSheet("background-color: #444;" if self.engine.pump_selector != 0 else "background-color: #0066cc;")
 
         # Fan 1 status
         if self.engine.fan1_state == 0:
@@ -208,7 +218,7 @@ class HydraulicsWindow(QWidget):
         # Selector styling
         self.btn_sel_1.setStyleSheet("background-color: #444;" if self.engine.pump_selector != 1 else "background-color: #0066cc;")
         self.btn_sel_2.setStyleSheet("background-color: #444;" if self.engine.pump_selector != 2 else "background-color: #0066cc;")
-        self.btn_sel_auto.setStyleSheet("background-color: #444;" if self.engine.pump_selector != 2 else "background-color: #0066cc;")
+        self.btn_sel_auto.setStyleSheet("background-color: #444;" if self.engine.pump_selector != 0 else "background-color: #0066cc;")
 
         # Preheaters
         self.status_pr1.set_state(self.engine.pre1_on)

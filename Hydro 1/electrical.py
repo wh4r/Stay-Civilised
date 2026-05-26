@@ -23,7 +23,7 @@ class ElectricalWindow(QWidget):
 
         self.engine = engine
 
-        self.setWindowTitle("Electrical Systems - Breaker Panel")
+        self.setWindowTitle("Breaker Panel")
         self.setStyleSheet("background-color: #121212; color: white;")
         self.setFixedSize(900, 470)
 
@@ -63,15 +63,8 @@ class ElectricalWindow(QWidget):
         """)
 
         header_layout.addWidget(panel_title)
-
         header_layout.addStretch()
-
-        self.battery_charge = UniversalGauge(
-            "DC Battery Charge",
-            0,
-            100,
-            "%"
-        )
+        self.battery_charge = UniversalGauge("DC Battery Charge",0,100,"%")
 
         self.battery_charge.setFixedSize(120, 120)
         header_layout.addWidget(self.battery_charge)

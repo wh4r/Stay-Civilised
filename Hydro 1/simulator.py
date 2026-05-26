@@ -41,7 +41,7 @@ class HydroSimulator(QMainWindow):
         main_layout = QVBoxLayout(central_widget)
 
         # -----------------------------------------------------------------------------------------------------------
-        # Top Section (1): Important annunciators
+        # Top Section (1): annunciators
         # -----------------------------------------------------------------------------------------------------------
         annunc_layout = QHBoxLayout()
         self.alarm_interlock = Annunciator("INTERLOCK", "red", persistent=True, sound_freq=330)
@@ -50,6 +50,7 @@ class HydroSimulator(QMainWindow):
         self.high_acceleration = Annunciator("HIGH ACCEL.", "red", persistent=True, sound_freq=770)
         self.reverse_power = Annunciator("REVERSE POWER", "red", persistent=True, sound_freq=880)
         self.sync_ready = Annunciator("SYNC READY", "green", persistent=False)
+        self.placeholder_1 = Annunciator(".", "gray", persistent=False)
 
         annunc_layout.addWidget(self.alarm_interlock)
         annunc_layout.addWidget(self.alarm_low_water)
@@ -57,25 +58,28 @@ class HydroSimulator(QMainWindow):
         annunc_layout.addWidget(self.high_acceleration)
         annunc_layout.addWidget(self.sync_ready)
         annunc_layout.addWidget(self.reverse_power)
+        annunc_layout.addWidget(self.placeholder_1)
         main_layout.addLayout(annunc_layout)
 
         # -----------------------------------------------------------------------------------------------------------
-        # Top Section (2): Important annunciators
+        # Top Section (2): annunciators
         # -----------------------------------------------------------------------------------------------------------
         annunc_layout_2 = QHBoxLayout()
         self.trip_alarm = Annunciator("TRIP", "red", persistent=True, sound_freq=440)
         self.alarm_overload = Annunciator("OVERLOAD", "red", persistent=True, sound_freq=550)
         self.malfunction = Annunciator("MALF.", "red", persistent=True, sound_freq=622)
         self.low_hyd_pres = Annunciator("LOW HYD. PRES.", "red", persistent=True, sound_freq=650)
-        self.placeholder_2 = Annunciator(".", "gray", persistent=False)
-        self.placeholder_3 = Annunciator(".", "gray", persistent=False)
+        self.bus_a_pwr = Annunciator("BUS A PWR", "red", persistent=True, sound_freq=680)
+        self.bus_b_pwr = Annunciator("BUS B PWR", "orange", persistent=True)
+        self.bus_dc_pwr = Annunciator("DC BUS PWR", "red", persistent=True, sound_freq=680)
 
         annunc_layout_2.addWidget(self.trip_alarm)
         annunc_layout_2.addWidget(self.alarm_overload)
         annunc_layout_2.addWidget(self.malfunction)
         annunc_layout_2.addWidget(self.low_hyd_pres)
-        annunc_layout_2.addWidget(self.placeholder_2)
-        annunc_layout_2.addWidget(self.placeholder_3)
+        annunc_layout_2.addWidget(self.bus_a_pwr)
+        annunc_layout_2.addWidget(self.bus_b_pwr)
+        annunc_layout_2.addWidget(self.bus_dc_pwr)
         main_layout.addLayout(annunc_layout_2)
 
         # -----------------------------------------------------------------------------------------------------------
@@ -224,9 +228,27 @@ class HydroSimulator(QMainWindow):
         self.blink_timer.timeout.connect(self.blink_alarms)
         self.blink_timer.start(500)
 
+        self.temp_timer = QTimer()
+        self.temp_timer.timeout.connect(self.loop_1s)
+        self.temp_timer.start(200)
+
+        self.slow_timer = QTimer()
+        self.slow_timer.timeout.connect(self.sim_loop_slow)
+        self.slow_timer.start(1000)
+
+    def sim_loop_slow(self):
+        # use this for optimisations
+        self.electrical_win.update_ui()
+        pass
+
+    def loop_1s(self):
+        self.engine.update_res_temp()
+        self.hydraulics_win.res_temp_1.set_value(self.engine.res_temp_1)
+        self.hydraulics_win.res_temp_2.set_value(self.engine.res_temp_2)
+
     def blink_alarms(self):
         for alarm in [self.trip_alarm, self.alarm_low_water, self.high_rpm, 
-                    self.high_acceleration, self.alarm_overload, self.reverse_power, self.alarm_interlock, self.low_hyd_pres]:
+                    self.high_acceleration, self.alarm_overload, self.reverse_power, self.alarm_interlock, self.low_hyd_pres, self.bus_a_pwr, self.bus_b_pwr, self.bus_dc_pwr]:
             alarm.toggle_blink()
 
     def synchronise(self):
@@ -272,6 +294,9 @@ class HydroSimulator(QMainWindow):
         self.reverse_power.acknowledge()
         self.alarm_interlock.acknowledge()
         self.low_hyd_pres.acknowledge()
+        self.bus_a_pwr.acknowledge()
+        self.bus_b_pwr.acknowledge()
+        self.bus_dc_pwr.acknowledge()
 
     def sim_loop_slow_main(self):
         self.engine.update_water_flow()
@@ -280,6 +305,16 @@ class HydroSimulator(QMainWindow):
         self.engine.update_pump_reservoir()
         self.engine.update_systems(0.1)
         self.alarm_interlock.set_state(self.engine.check_interlock())
+
+        # electricity
+        if self.engine.gen_island:
+            self.engine.ac_bus_b = self.engine.breaker_hv1gb
+        else:
+            self.engine.ac_bus_b = False
+            self.engine.ac_bus_b_unpowered()
+        self.bus_a_pwr.set_state(not self.engine.ac_bus_a)
+        self.bus_b_pwr.set_state(not self.engine.ac_bus_b)
+        self.bus_dc_pwr.set_state(not self.engine.dc_bus)
 
     def update_simulation(self):
         self.engine.sim_time += 0.05

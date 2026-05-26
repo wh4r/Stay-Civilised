@@ -62,6 +62,11 @@ class SimulationEngine:
         self.res_press_2 = 0
         self.res_outflow_1 = 0
         self.res_outflow_2 = 0
+        # reservoir temperatures
+        self.res_temp_1 = 20
+        self.res_temp_2 = 20
+        self.temp_decrease_timer_1 = 60
+        self.temp_decrease_timer_2 = 60
         # coefficient
         self.hyd_coef = 0
         
@@ -77,41 +82,122 @@ class SimulationEngine:
         self.breaker_lv1dgs = False
         self.breaker_lv1em = False
         self.ac_bus_a = False
+        self.ac_bus_a_usage = 0
         self.ac_bus_b = False
+        self.ac_bus_b_usage = 0
         self.dc_bus = False
         self.battery_charge = 100.0  # Battery charge level (0-100%)
+        self.gen_island = False
+
+        # EDG
+        self.edg_started = False
         
         # Constants
         self.SAMPLE_RATE = 44100
 
-    def breaker_event(self, type, breaker):
+    def update_res_temp(self):
+        if self.pre1_on:
+            self.res_temp_1 += 0.1
+        elif self.pump1_state > 0:
+            pass
+        else:
+            if self.temp_decrease_timer_1 > 0:
+                self.temp_decrease_timer_1 -= 1
+            else:
+                self.res_temp_1 -= 0.1
+                self.temp_decrease_timer_1 = 60
+        
+        if self.pre2_on:
+            self.res_temp_2 += 0.1
+        elif self.pump2_state > 0:
+            pass
+        else:
+            if self.temp_decrease_timer_2 > 0:
+                self.temp_decrease_timer_2 -= 1
+            else:
+                self.res_temp_2 -= 0.1
+                self.temp_decrease_timer_2 = 60
+
+        if self.res_temp_1 > 42 or self.res_temp_1 < 35:
+            self.pump1_state = 0
+        if self.res_temp_2 > 42 or self.res_temp_2 < 35:
+            self.pump2_state = 0
+
+    def ac_bus_a_unpowered(self):
+        self.pump1_state = 0
+        self.fan1_state = 0
+    
+    def ac_bus_b_unpowered(self):
+        self.pump2_state = 0
+        self.fan2_state = 0
+    
+    def dc_bus_unpowered(self):
+        # disconnect auto controls here
+        pass
+
+    def breaker_event(self, state, breaker):
         # bus A interlock
         if breaker == "breaker_hv1ga":
             self.breaker_hv1s1 = False
             self.breaker_hv1s2 = False
             self.breaker_lv1dg = False
+            if state and self.gen_island:
+                self.ac_bus_a = True
+            else:
+                self.ac_bus_a = False
+                self.ac_bus_a_unpowered()
         elif breaker == "breaker_hv1s1":
             self.breaker_hv1s2 = False
             self.breaker_hv1ga = False
             self.breaker_lv1dg = False
+            if state:
+                self.ac_bus_a = True
+            else:
+                self.ac_bus_a = False
+                self.ac_bus_a_unpowered()
         elif breaker == "breaker_hv1s2":
             self.breaker_hv1s1 = False
             self.breaker_hv1ga = False
             self.breaker_lv1dg = False
+            if state:
+                self.ac_bus_a = True
+            else:
+                self.ac_bus_a = False
+                self.ac_bus_a_unpowered()
         elif breaker == "breaker_lv1dg":
             self.breaker_hv1s1 = False
             self.breaker_hv1s2 = False
             self.breaker_hv1ga = False
+            if state and self.edg_started:
+                self.ac_bus_a = True
+            else:
+                self.ac_bus_a = False
+                self.ac_bus_a_unpowered()
         # DC bus interlock
-        elif breaker == "breaker_dv1dca":
+        elif breaker == "breaker_dc1dca":
             self.breaker_dc1dcb = False
             self.breaker_lv1em = False
-        elif breaker == "breaker_dv1dcb":
+            if state and self.ac_bus_a:
+                self.dc_bus = True
+            else:
+                self.dc_bus = False
+                self.dc_bus_unpowered()
+        elif breaker == "breaker_dc1dcb":
             self.breaker_dc1dca = False
             self.breaker_lv1em = False
+            if state and self.ac_bus_b:
+                self.dc_bus = True
+            else:
+                self.dc_bus = False
+                self.dc_bus_unpowered()
         elif breaker == "breaker_lv1em":
             self.breaker_dc1dca = False
             self.breaker_dc1dcb = False
+            if state and self.battery_charge>0:
+                self.dc_bus = True
+            else:
+                self.dc_bus = False
+                self.dc_bus_unpowered()
         print(type, breaker)
         # bus b only has 1 input so no need for interlock
 
@@ -188,7 +274,9 @@ class SimulationEngine:
                 high_accel = True
                 self.add_damage()
             self.current_rpm += (target_rpm - self.current_rpm) * 0.01 + (math.sin(random.randint(10,20)*self.sim_time)*self.turbine_inflow_variation*0.03)
+            self.gen_island = True if self.current_rpm > 2950 and self.current_rpm < 3050 else False
         else:
+            self.gen_island = True
             target_rpm = 3000.0
             self.current_rpm += (target_rpm - self.current_rpm) * 0.1
             target_rpm = (self.flow_to_turbine[0] * 12.0) if not self.is_emergency else 0.0
@@ -264,10 +352,10 @@ class SimulationEngine:
                 self.fan2_timer = 0.0
 
     def start_pump(self, pump_num):
-        if pump_num == 1 and self.pump1_state == 0:
+        if pump_num == 1 and self.pump1_state == 0 and self.res_temp_1 >= 35 and self.res_temp_1 <= 42 and self.fan1_state == 2 and self.ac_bus_a:
             self.pump1_state = 1
             self.pump1_timer = 0.0
-        elif pump_num == 2 and self.pump2_state == 0:
+        elif pump_num == 2 and self.pump2_state == 0 and self.res_temp_2 >= 35 and self.res_temp_2 <= 42 and self.fan2_state == 2 and self.ac_bus_b:
             self.pump2_state = 1
             self.pump2_timer = 0.0
 
@@ -280,10 +368,10 @@ class SimulationEngine:
             self.pump2_timer = 0.0
 
     def start_fan(self, fan_num):
-        if fan_num == 1 and self.fan1_state == 0:
+        if fan_num == 1 and self.fan1_state == 0 and self.ac_bus_a:
             self.fan1_state = 1
             self.fan1_timer = 0.0
-        elif fan_num == 2 and self.fan2_state == 0:
+        elif fan_num == 2 and self.fan2_state == 0 and self.ac_bus_b:
             self.fan2_state = 1
             self.fan2_timer = 0.0
 
@@ -291,9 +379,13 @@ class SimulationEngine:
         if fan_num == 1:
             self.fan1_state = 0
             self.fan1_timer = 0.0
+            self.pump1_state = 0
+            self.pre1_on = False
         elif fan_num == 2:
             self.fan2_state = 0
             self.fan2_timer = 0.0
+            self.pump2_state = 0
+            self.pre2_on = False
 
     def update_turbine_water_level(self):
         if self.current_rpm < 10:
