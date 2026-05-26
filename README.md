@@ -36,11 +36,3 @@ Programmed and tested on python 3.14.3 avaialble [here](https://www.python.org/d
 | **v0.2.2** | Optimisations | ⏳ Planned | Medium |
 | **v0.2.3** | Automatic turbine control | ⏳ Planned | Low |
 | **v0.3.0** | Spillway, demand, maintenance | ⏳ Planned | High |
-
-## v0.2.0 Changelog
-
-This is the largest update so far. Most of the physics has been moved to calculation.py and is run in simulator.py as self.engine. Excitation should work now (i think?). Hydraulics and electrical panels have been added and can be opened and closed via the buttons on the main panel. The hydraulics panel somewhat works and the electrical panel is only a proof of concept as of now. Expect these panels to be fully functional in v0.2.1. After 0.2.1, 0.2.2 will provide optimisations to remove redundant checks and calculations.
-
-The old code is still available on the `0.1_before_rewrite` branch.
-
-(thanks chatgpt for fixing my absolutely horrible naming scheme)
