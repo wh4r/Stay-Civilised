@@ -1,8 +1,5 @@
 from PyQt6.QtWidgets import QLabel
-from PyQt6.QtCore import Qt, QTimer
-import numpy as np
-import sounddevice as sd
-import threading
+from PyQt6.QtCore import Qt
 
 class Annunciator(QLabel):
     def __init__(self, text, alert_color="red", persistent=True, sound_freq=None):
@@ -16,16 +13,6 @@ class Annunciator(QLabel):
         self.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.setFixedSize(120, 40)
         self.update_style()
-        
-        # sound loop
-        self.sound_timer = QTimer()
-        self.sound_timer.timeout.connect(self._sound_if_active)
-        self.sound_timer.start(500)  # beep every 500 ms
-
-    # Plays sound
-    def _sound_if_active(self):
-        if self.active and self.sound_freq:
-            self.play_sound(self.sound_freq)
 
     # Run to turn on/off the annunciator
     def set_state(self, active):
@@ -50,16 +37,6 @@ class Annunciator(QLabel):
             self.blink = False
         self.update_style()
 
-    # Plays the sound at the given frequency
-    def play_sound(self, freq, duration=0.2, volume=0.2):
-        def _beep():
-            fs = 44100
-            t = np.linspace(0, duration, int(fs*duration), endpoint=False)
-            wave = volume * np.sin(2 * np.pi * freq * t).astype(np.float32)
-            sd.play(wave, fs)
-            sd.wait()
-        threading.Thread(target=_beep, daemon=True).start()
-
     # Updates the style of the annunciator
     def update_style(self):
         if self.active:
@@ -79,3 +56,4 @@ class Annunciator(QLabel):
             font-weight: bold;
             border-radius: 4px;
         """)
+

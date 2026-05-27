@@ -1,6 +1,7 @@
 import math
 import random
 import numpy as np
+from playsound3 import playsound
 
 class SimulationEngine:
     def __init__(self):
@@ -86,7 +87,7 @@ class SimulationEngine:
         self.ac_bus_b = False
         self.ac_bus_b_usage = 0
         self.dc_bus = False
-        self.battery_charge = 100.0  # Battery charge level (0-100%)
+        self.battery_charge = 5.0  # Battery charge level (0-100%)
         self.gen_island = False
 
         # EDG
@@ -94,6 +95,15 @@ class SimulationEngine:
         
         # Constants
         self.SAMPLE_RATE = 44100
+    
+    def update_battery(self):
+        if self.breaker_lv1em:
+            if self.battery_charge > 0:
+                self.battery_charge -= 0.1
+            else:
+                self.dc_bus = False
+        elif self.breaker_dc1dca or self.breaker_dc1dcb:
+            self.battery_charge += 0.05
 
     def update_res_temp(self):
         if self.pre1_on:
@@ -199,6 +209,7 @@ class SimulationEngine:
                 self.dc_bus = False
                 self.dc_bus_unpowered()
         print(type, breaker)
+        playsound("Hydro 1\\breaker.mp3", block=False)
         # bus b only has 1 input so no need for interlock
 
 
@@ -315,12 +326,11 @@ class SimulationEngine:
             self.damage += amount
 
     def damage_system(self):
-        malfunction = False
         if self.damage > 80 and random.randint(0, 50) == 0:
             self.is_emergency = True
-            malfunction = True
             self.current_rpm = 0.0
-        return malfunction
+            return True
+        return False
 
     def update_systems(self, dt=0.05):
         # Pump 1 state machine

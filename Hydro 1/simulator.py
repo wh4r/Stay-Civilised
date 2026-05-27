@@ -33,6 +33,9 @@ class HydroSimulator(QMainWindow):
         # Set sound
         self.turbine_phase_hum = 0.0
         self.turbine_phase_whirr = 0.0
+        self.alarm_sample_index = 0
+        self.active_sound_freqs = []
+        self.alarm_phases = {}
         self.stream = sd.OutputStream(channels=1, callback=self.sound_callback, samplerate=self.engine.SAMPLE_RATE)
         self.stream.start()
 
@@ -50,7 +53,7 @@ class HydroSimulator(QMainWindow):
         self.high_acceleration = Annunciator("HIGH ACCEL.", "red", persistent=True, sound_freq=770)
         self.reverse_power = Annunciator("REVERSE POWER", "red", persistent=True, sound_freq=880)
         self.sync_ready = Annunciator("SYNC READY", "green", persistent=False)
-        self.placeholder_1 = Annunciator(".", "gray", persistent=False)
+        self.placeholder = Annunciator(".", "gray", persistent=False)
 
         annunc_layout.addWidget(self.alarm_interlock)
         annunc_layout.addWidget(self.alarm_low_water)
@@ -58,7 +61,7 @@ class HydroSimulator(QMainWindow):
         annunc_layout.addWidget(self.high_acceleration)
         annunc_layout.addWidget(self.sync_ready)
         annunc_layout.addWidget(self.reverse_power)
-        annunc_layout.addWidget(self.placeholder_1)
+        annunc_layout.addWidget(self.placeholder)
         main_layout.addLayout(annunc_layout)
 
         # -----------------------------------------------------------------------------------------------------------
@@ -81,6 +84,27 @@ class HydroSimulator(QMainWindow):
         annunc_layout_2.addWidget(self.bus_b_pwr)
         annunc_layout_2.addWidget(self.bus_dc_pwr)
         main_layout.addLayout(annunc_layout_2)
+
+        # -----------------------------------------------------------------------------------------------------------
+        # Top Section (2): annunciators
+        # -----------------------------------------------------------------------------------------------------------
+        annunc_layout_3 = QHBoxLayout()
+        self.placeholder_1 = Annunciator(".", "gray", persistent=False)
+        self.placeholder_2 = Annunciator(".", "gray", persistent=False)
+        self.placeholder_3 = Annunciator(".", "gray", persistent=False)
+        self.placeholder_4 = Annunciator(".", "gray", persistent=False)
+        self.placeholder_5 = Annunciator(".", "gray", persistent=False)
+        self.placeholder_6 = Annunciator(".", "gray", persistent=False)
+        self.placeholder_7 = Annunciator(".", "gray", persistent=False)
+
+        annunc_layout_3.addWidget(self.placeholder_1)
+        annunc_layout_3.addWidget(self.placeholder_2)
+        annunc_layout_3.addWidget(self.placeholder_3)
+        annunc_layout_3.addWidget(self.placeholder_4)
+        annunc_layout_3.addWidget(self.placeholder_5)
+        annunc_layout_3.addWidget(self.placeholder_6)
+        annunc_layout_3.addWidget(self.placeholder_7)
+        main_layout.addLayout(annunc_layout_3)
 
         # -----------------------------------------------------------------------------------------------------------
         # Middle Section (1): Operation gauges
@@ -224,6 +248,10 @@ class HydroSimulator(QMainWindow):
         self.water_timer.timeout.connect(self.sim_loop_slow_main)
         self.water_timer.start(100)
 
+        self.water_inflow = QTimer()
+        self.water_inflow.timeout.connect(self.update_water_inflow)
+        self.water_inflow.start(5000)
+
         self.blink_timer = QTimer()
         self.blink_timer.timeout.connect(self.blink_alarms)
         self.blink_timer.start(500)
@@ -236,9 +264,13 @@ class HydroSimulator(QMainWindow):
         self.slow_timer.timeout.connect(self.sim_loop_slow)
         self.slow_timer.start(1000)
 
+    def update_water_inflow(self):
+        self.engine.update_water_flow()
+
     def sim_loop_slow(self):
         # use this for optimisations
         self.electrical_win.update_ui()
+        self.engine.update_battery()
         pass
 
     def loop_1s(self):
@@ -248,7 +280,9 @@ class HydroSimulator(QMainWindow):
 
     def blink_alarms(self):
         for alarm in [self.trip_alarm, self.alarm_low_water, self.high_rpm, 
-                    self.high_acceleration, self.alarm_overload, self.reverse_power, self.alarm_interlock, self.low_hyd_pres, self.bus_a_pwr, self.bus_b_pwr, self.bus_dc_pwr]:
+                    self.high_acceleration, self.alarm_overload, self.reverse_power, 
+                    self.alarm_interlock, self.low_hyd_pres, self.bus_a_pwr, 
+                    self.bus_b_pwr, self.bus_dc_pwr, self.malfunction]:
             alarm.toggle_blink()
 
     def synchronise(self):
@@ -299,7 +333,6 @@ class HydroSimulator(QMainWindow):
         self.bus_dc_pwr.acknowledge()
 
     def sim_loop_slow_main(self):
-        self.engine.update_water_flow()
         self.engine.update_flow_to_turbine()
         self.engine.update_turbine_water_level()
         self.engine.update_pump_reservoir()
@@ -364,6 +397,17 @@ class HydroSimulator(QMainWindow):
         if self.engine.water_level < 50 or self.engine.current_rpm > 3100:
             self.engine.add_damage()
 
+        # Update active sound frequencies for the audio callback
+        active_freqs = []
+        for alarm in [
+            self.alarm_interlock, self.alarm_low_water, self.high_rpm, self.high_acceleration,
+            self.reverse_power, self.trip_alarm, self.alarm_overload, self.malfunction,
+            self.low_hyd_pres, self.bus_a_pwr, self.bus_dc_pwr
+        ]:
+            if alarm.active and alarm.sound_freq:
+                active_freqs.append(alarm.sound_freq)
+        self.active_sound_freqs = active_freqs
+
         # Malfunction
         if self.engine.damage_system():
             self.malfunction.set_state(True)
@@ -401,22 +445,54 @@ class HydroSimulator(QMainWindow):
             self.electrical_win.show()
 
     def sound_callback(self, outdata, frames, time, status):
+        # 1. Calculate turbine sound (hum and whirr)
         rpm = self.engine.current_rpm
-        if rpm < 1:
-            outdata.fill(0)
-            return
-        max_volume = 0.2
-        volume = max(0.0, min(max_volume, ((rpm - 1) / (100 - 1)) * max_volume))
-        base_freq = 50 + (rpm / 6000) * 500
-        phase_inc_hum = 2 * np.pi * base_freq / self.engine.SAMPLE_RATE
-        phase_inc_whirr = 2 * np.pi * base_freq * 3 / self.engine.SAMPLE_RATE
         chunk = np.zeros(frames, dtype=np.float32)
-        for i in range(frames):
-            chunk[i] = volume * (np.sin(self.turbine_phase_hum) + 0.3 * np.sin(self.turbine_phase_whirr))
-            self.turbine_phase_hum += phase_inc_hum
-            self.turbine_phase_whirr += phase_inc_whirr
-        self.turbine_phase_hum %= 2 * np.pi
-        self.turbine_phase_whirr %= 2 * np.pi
+        
+        if rpm >= 1:
+            max_volume = 0.2
+            volume = max(0.0, min(max_volume, ((rpm - 1) / (100 - 1)) * max_volume))
+            base_freq = 50 + (rpm / 6000) * 500
+            phase_inc_hum = 2 * np.pi * base_freq / self.engine.SAMPLE_RATE
+            phase_inc_whirr = 2 * np.pi * base_freq * 3 / self.engine.SAMPLE_RATE
+            
+            for i in range(frames):
+                chunk[i] = volume * (np.sin(self.turbine_phase_hum) + 0.3 * np.sin(self.turbine_phase_whirr))
+                self.turbine_phase_hum += phase_inc_hum
+                self.turbine_phase_whirr += phase_inc_whirr
+            
+            self.turbine_phase_hum %= 2 * np.pi
+            self.turbine_phase_whirr %= 2 * np.pi
+
+        # 2. Add alarm sounds if any are active
+        active_freqs = getattr(self, 'active_sound_freqs', [])
+        if active_freqs:
+            cycle_samples = int(self.engine.SAMPLE_RATE * 0.5)  # 500 ms cycle
+            on_samples = int(self.engine.SAMPLE_RATE * 0.2)     # 200 ms beep
+            
+            # Generate the alarm waves
+            for i in range(frames):
+                cycle_pos = (self.alarm_sample_index + i) % cycle_samples
+                if cycle_pos < on_samples:
+                    # Alarm is in the "ON" part of the beep cycle
+                    alarm_signal = 0.0
+                    for freq in active_freqs:
+                        # Get or initialize phase for this frequency
+                        phase = self.alarm_phases.get(freq, 0.0)
+                        alarm_signal += np.sin(phase)
+                        # Increment phase
+                        phase += 2 * np.pi * freq / self.engine.SAMPLE_RATE
+                        self.alarm_phases[freq] = phase % (2 * np.pi)
+                    
+                    # Normalize alarm volume so it doesn't clip
+                    alarm_volume = 0.15
+                    chunk[i] += (alarm_signal / len(active_freqs)) * alarm_volume
+            
+            self.alarm_sample_index = (self.alarm_sample_index + frames) % cycle_samples
+        else:
+            self.alarm_sample_index = 0
+            self.alarm_phases.clear()
+            
         outdata[:] = chunk.reshape(-1, 1)
 
 if __name__ == "__main__":
