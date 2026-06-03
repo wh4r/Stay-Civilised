@@ -6,6 +6,7 @@
 **Clone repo**
 ```cmd
 git clone https://github.com/wh4r/Stay-Civilised
+cd Stay-Civilised
 ```
 
 **Create virtual environment**
