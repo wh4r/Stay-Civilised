@@ -1,22 +1,18 @@
 import math
 import random
-import numpy as np
 from playsound3 import playsound
 
 class SimulationEngine:
     def __init__(self):
         # Simulation variables
+        # Weather
+        self.external_temp = 21.0
+        self.rain = False
 
-        # timing
+        # TIMING
         self.sim_time = 0.0
 
-        # generation
-        self.gen_phase = 0.0
-        self.grid_phase = 0.0
-        self.phase_diff = 0.0
-        self.phase_diff_prev = 0.0
-
-        #water
+        # WATER
         self.water_inflow = 50.0
         self.water_level = 70.0
         self.sync = False
@@ -24,10 +20,15 @@ class SimulationEngine:
         self.is_emergency = False
         self.gate_direction = 0.0
 
-        # turbine
+        # TURBINE
+        # generator
         self.current_rpm = 0.0
         self.background_rpm = 0.0
         self.power = 0.0
+        self.excitation = 0.0
+        self.excitation_direction = 0.0
+        self.friction_coefficient = 0
+        # water
         self.turbine_inflow_variation = 0.0
         self.damage = 0.0
         self.flow_to_turbine = [0.0 for _ in range(50)]
@@ -36,9 +37,19 @@ class SimulationEngine:
         self.bypass_opening = 0.0
         self.drain_direction = 0.0
         self.drain_opening = 0.0
-        self.excitation = 0.0
-        self.excitation_direction = 0.0
-        self.friction_coefficient = 0
+        # sync
+        self.gen_phase = 0.0
+        self.grid_phase = 0.0
+        self.phase_diff = 0.0
+        self.phase_diff_prev = 0.0
+        # oil
+        self.oil_pump_direction = 0
+        self.oil_pump_power = 0
+        self.oil_pump_source = 0 # 0=ELEC., 1=SHAFT, 2=EM.
+        self.oil_temperature = self.external_temp
+        self.oil_preheater = False
+        self.heat_exc_direction = 0
+        self.heat_exc_flow = 0
 
 
         # HYDRAULICS
@@ -71,7 +82,8 @@ class SimulationEngine:
         # coefficient
         self.hyd_coef = 0
         
-        # Breakers: True = CLOSED (ON), False = OPEN (OFF)
+        # BREAKERS
+        # True = CLOSED (ON), False = OPEN (OFF)
         self.breaker_hv1s1 = False
         self.breaker_hv1s2 = False
         self.breaker_hv1ge = False
@@ -87,7 +99,7 @@ class SimulationEngine:
         self.ac_bus_b = False
         self.ac_bus_b_usage = 0
         self.dc_bus = False
-        self.battery_charge = 5.0  # Battery charge level (0-100%)
+        self.battery_charge = 5.0
         self.gen_island = False
 
         # EDG
@@ -95,8 +107,15 @@ class SimulationEngine:
         
         # Constants
         self.SAMPLE_RATE = 44100
+
+    def save_file(self, filename):
+        pass
+
+    def oil_preheat(self):
+        self.oil_preheater = not self.oil_preheater
     
     def update_battery(self):
+        # charges and discharges the battery by checking if its connected
         if self.breaker_lv1em:
             if self.battery_charge > 0:
                 self.battery_charge -= 0.1
@@ -106,11 +125,14 @@ class SimulationEngine:
             self.battery_charge += 0.05
 
     def update_res_temp(self):
+        # increases temperature if preheater is on
+        # decreases temeprature slowly untill it reaches ambient temperature
+        # the decrease should be changed to be exponential
         if self.pre1_on:
             self.res_temp_1 += 0.1
         elif self.pump1_state > 0:
             pass
-        else:
+        elif self.res_temp_1 > self.external_temp:
             if self.temp_decrease_timer_1 > 0:
                 self.temp_decrease_timer_1 -= 1
             else:
@@ -121,7 +143,7 @@ class SimulationEngine:
             self.res_temp_2 += 0.1
         elif self.pump2_state > 0:
             pass
-        else:
+        elif self.res_temp_2 > self.external_temp:
             if self.temp_decrease_timer_2 > 0:
                 self.temp_decrease_timer_2 -= 1
             else:
@@ -134,18 +156,22 @@ class SimulationEngine:
             self.pump2_state = 0
 
     def ac_bus_a_unpowered(self):
+        # disables systems running on AC bus A when it is unpowered
         self.pump1_state = 0
         self.fan1_state = 0
     
     def ac_bus_b_unpowered(self):
+        # disables systems running on AC bus B when it is unpowered
         self.pump2_state = 0
         self.fan2_state = 0
     
     def dc_bus_unpowered(self):
+        # disables systems running on the DC bus when it is unpowered
         # disconnect auto controls here
         pass
 
     def breaker_event(self, state, breaker):
+        # when a breaker is closed, this function ensures only one breaker powers each bys by disabling other breakers connected to the bus
         # bus A interlock
         if breaker == "breaker_hv1ga":
             self.breaker_hv1s1 = False
@@ -208,12 +234,12 @@ class SimulationEngine:
             else:
                 self.dc_bus = False
                 self.dc_bus_unpowered()
-        print(type, breaker)
         playsound("Hydro 1\\breaker.mp3", block=False)
         # bus b only has 1 input so no need for interlock
 
 
     def update_water_flow(self):
+        # updates the amount of water flowing into the reservoir
         min_inflow = 70.0
         max_inflow = 100.0
         step = random.uniform(-0.5, 0.5)
@@ -228,30 +254,36 @@ class SimulationEngine:
         self.water_inflow = max(min_inflow, min(max_inflow, self.water_inflow))
 
     def update_excitation(self):
+        # i have no idea why this is here but the code will explode if this is removed
         self.excitation += self.excitation_direction
 
     def update_flow_to_turbine(self):
+        # updates the flow through the very long pipe
         self.flow_to_turbine[len(self.flow_to_turbine)-1] = self.gate_opening
         for i in range(0, len(self.flow_to_turbine)-1):
             self.flow_to_turbine[i] += (self.flow_to_turbine[i+1]-self.flow_to_turbine[i])
 
     def update_gate_pos(self):
+        # opens/closes the gate
         if not self.is_emergency and self.gate_direction != 0:
             self.gate_opening = max(0.0, min(100.0, self.gate_opening + (self.gate_direction * 0.01 * (self.hyd_coef if self.gate_direction > 0 else 1))))
             if self.turbine_inflow_variation <= self.current_rpm/200:
                 self.turbine_inflow_variation += 0.1
 
     def update_drain_bypass_pos(self):
+        # updates turbine level when bypass or drain are opened
         self.drain_opening = max(0.0, min(100.0, self.drain_opening + (self.drain_direction * (self.hyd_coef if self.drain_direction > 0 else 1))))
         self.bypass_opening = max(0.0, min(100.0, self.bypass_opening + (self.bypass_direction * (self.hyd_coef if self.bypass_direction > 0 else 1))))
 
     def update_turbine_inflow(self):
+        # determines how much turbulence is at the gate and thus fluctuations in flow
         if self.turbine_inflow_variation > 0.09:
             self.turbine_inflow_variation -= 0.02
         else:
             self.turbine_inflow_variation = 0.0
 
     def update_hydraulics(self):
+        # updates the reservoir pressure when the pumps are starting/running
         if self.pump1_state == 2:
             inflow1 = 100
         elif self.pump1_state == 1:
@@ -275,8 +307,11 @@ class SimulationEngine:
     
 
     def update_rpm(self):
-        self.friction_coefficient = self.current_rpm*0.1
-        # This is calculated using the damage, oil quality, rpm
+        # calculates the turbine RPM
+        # there are LOTS of calculations DO NOT TOUCH THIS FUNCTION
+
+        self.friction_coefficient = (self.current_rpm*0.1)*(self.damage/10)
+        # This is calculated using the damage, oil temperature, rpm
 
         high_accel = False
         if not self.sync:
@@ -295,6 +330,7 @@ class SimulationEngine:
         return high_accel
 
     def update_water_level(self):
+        # Updates the reservoir water level very slowly
         water_outflow = self.gate_opening
         net_flow = self.water_inflow - water_outflow
         self.water_level += net_flow * 0.00001
@@ -302,6 +338,7 @@ class SimulationEngine:
         return water_outflow
 
     def update_synchroscope(self, dt=0.05):
+        # calculates phase difference when turbine is not synced
         grid_freq = 50.0
         if not self.sync:
             freq = (self.current_rpm / 60.0) + (0.1 * math.sin(self.sim_time))
@@ -315,6 +352,9 @@ class SimulationEngine:
             return 50.0, 0.0
 
     def update_power_output(self):
+        # Calculates the power produced in MW
+        # This must be updated to follow the equation P=pghQ where Q is flow rate in m^3
+
         if self.sync:
             self.power = ((self.background_rpm-3000)/700)*100
         else:
@@ -322,10 +362,14 @@ class SimulationEngine:
         return self.power
 
     def add_damage(self, amount=0.1):
+        # adds damage
+        # i have no idea why this exists but it does
         if self.damage < 100:
             self.damage += amount
 
     def damage_system(self):
+        # explodes the turbine when it is very damaged
+        # update this to scale as damage increases, higher change when higher damage
         if self.damage > 80 and random.randint(0, 50) == 0:
             self.is_emergency = True
             self.current_rpm = 0.0
@@ -333,6 +377,7 @@ class SimulationEngine:
         return False
 
     def update_systems(self, dt=0.05):
+        # function to update the hydraulics pumps and their fans
         # Pump 1 state machine
         if self.pump1_state == 1:
             self.pump1_timer += dt
@@ -362,6 +407,7 @@ class SimulationEngine:
                 self.fan2_timer = 0.0
 
     def start_pump(self, pump_num):
+        # the name explains this
         if pump_num == 1 and self.pump1_state == 0 and self.res_temp_1 >= 35 and self.res_temp_1 <= 42 and self.fan1_state == 2 and self.ac_bus_a:
             self.pump1_state = 1
             self.pump1_timer = 0.0
@@ -370,6 +416,7 @@ class SimulationEngine:
             self.pump2_timer = 0.0
 
     def stop_pump(self, pump_num):
+        # the name explains this
         if pump_num == 1:
             self.pump1_state = 0
             self.pump1_timer = 0.0
@@ -378,6 +425,7 @@ class SimulationEngine:
             self.pump2_timer = 0.0
 
     def start_fan(self, fan_num):
+        # the name explains this
         if fan_num == 1 and self.fan1_state == 0 and self.ac_bus_a:
             self.fan1_state = 1
             self.fan1_timer = 0.0
@@ -386,6 +434,7 @@ class SimulationEngine:
             self.fan2_timer = 0.0
 
     def stop_fan(self, fan_num):
+        # the name explains this
         if fan_num == 1:
             self.fan1_state = 0
             self.fan1_timer = 0.0
@@ -398,13 +447,14 @@ class SimulationEngine:
             self.pre2_on = False
 
     def update_turbine_water_level(self):
+        # changes the turbine level when bypass or drain is active
         if self.current_rpm < 10:
             self.turbine_water_level += (self.bypass_opening * .01) - (self.drain_opening * .01)
         
         self.turbine_water_level = max(0.0, min(100.0, self.turbine_water_level))
 
     def update_pump_reservoir(self):
-        # Pump 2 increases reservoir level only when RUNNING (state 2)
+        # i have no idea what this function does. better not touch this.
         if self.pump2_state == 2:
             self.pump2_flow += (1.0 - self.pump2_flow) * 0.1
         else:
@@ -413,6 +463,7 @@ class SimulationEngine:
         self.water_level = min(100.0, self.water_level)
 
     def check_interlock(self):
+        # checks if something is running when its not supposed to
         if self.current_rpm < 10:
             return False
         elif self.bypass_opening > 0 or self.drain_opening > 0:

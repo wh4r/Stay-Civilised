@@ -3,7 +3,7 @@ from PyQt6.QtGui import QPainter, QColor, QPen, QPolygonF, QFont
 from PyQt6.QtCore import Qt, QPointF
 
 class UniversalGauge(QWidget):
-    def __init__(self, title="", min_val=0, max_val=100, unit="", parent=None):
+    def __init__(self, title="", min_val=0, max_val=100, unit="", parent=None, dp=1):
         super().__init__(parent)
         self.setMinimumSize(200, 200)
         self.value = 0
@@ -11,6 +11,7 @@ class UniversalGauge(QWidget):
         self.needle_color = QColor(255, 0, 0)
         self.start_angle = 240  # start position
         self.span_angle = 240   # arc length
+        self.dp=dp
 
     # Changes the values of the gauge
     def configure(self, min_val, max_val, unit, title, start_angle=240, span_angle=240, needle_color="red"):
@@ -71,11 +72,11 @@ class UniversalGauge(QWidget):
         painter.setPen(Qt.GlobalColor.white)
         if self.span_angle < 360:
             painter.setFont(QFont("Arial", 10, QFont.Weight.Bold))
-            painter.drawText(-50, 40, 100, 20, Qt.AlignmentFlag.AlignCenter, f"{self.value:.1f} {self.unit}")
+            painter.drawText(-50, 40, 100, 20, Qt.AlignmentFlag.AlignCenter, f"{round(self.value, self.dp)} {self.unit}")
             painter.setFont(QFont("Arial", 8))
             painter.drawText(-50, 60, 100, 20, Qt.AlignmentFlag.AlignCenter, self.title)
 
-class WaterLevelGauge(QWidget):
+class LevelGauge(QWidget):
     # Special vertical gauge for the water level display
     def __init__(self, title, color = [0,120,255], parent=None):
         super().__init__(parent)

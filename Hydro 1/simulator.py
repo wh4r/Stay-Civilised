@@ -1,19 +1,18 @@
 import sys
-import math
 from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel
 from PyQt6.QtCore import Qt, QTimer
 import numpy as np
 import sounddevice as sd
-import random
 from playsound3 import playsound
 
 # Import custom modules
 from annunciators import Annunciator
-from gauges import UniversalGauge, WaterLevelGauge
+from gauges import UniversalGauge, LevelGauge
 from buttons import CustomButton
 from calculation import SimulationEngine
 from hydraulics import HydraulicsWindow
 from electrical import ElectricalWindow
+from turbine import TurbineWindow
 
 class HydroSimulator(QMainWindow):
     def __init__(self):
@@ -29,6 +28,9 @@ class HydroSimulator(QMainWindow):
 
         # Electrical Window
         self.electrical_win = ElectricalWindow(self.engine)
+
+        # Turbine Window
+        self.turbine_win = TurbineWindow(self.engine)
 
         # Set sound
         self.turbine_phase_hum = 0.0
@@ -110,13 +112,13 @@ class HydroSimulator(QMainWindow):
         # Middle Section (1): Operation gauges
         # -----------------------------------------------------------------------------------------------------------
         gauges_layout = QHBoxLayout()
-        self.level_gauge = WaterLevelGauge("Forebay Level")
-        self.turbine_level_gauge = WaterLevelGauge("Turbine level")
-        self.drain_gauge = WaterLevelGauge("Drain", [255,0,100])
-        self.bypass_gauge = WaterLevelGauge("Bypasss", [255,0,100])
+        self.level_gauge = LevelGauge("Forebay Level")
+        self.turbine_level_gauge = LevelGauge("Turbine level")
+        self.drain_gauge = LevelGauge("Drain", [255,0,100])
+        self.bypass_gauge = LevelGauge("Bypasss", [255,0,100])
         self.rpm_gauge = UniversalGauge("Turbine RPM", 0, 4000, "RPM")
         self.freq_gauge = UniversalGauge("Frequency", 45, 65, "Hz")
-        self.gate_guage = UniversalGauge("Gate", 0, 100, "%")
+        self.gate_guage = UniversalGauge("Gate", 0, 100, "%", dp=3)
         self.synchro = UniversalGauge("Synchroscope", 0, 360, "")
         self.synchro.configure(0, 360, "", "Synchroscope", start_angle=0, span_angle=360, needle_color="yellow")
         self.power_gauge = UniversalGauge("Power", -10, 100, "MW")
@@ -157,18 +159,14 @@ class HydroSimulator(QMainWindow):
         self.btn_emergency = CustomButton("TRIP", "#800")
         self.btn_reset = CustomButton("RESET TRIP", "#800")
         self.ack_button = CustomButton("ACKNOWLEDGE", "#444")
-        self.decrease_excitation = CustomButton("-")
-        self.stop_excitation = CustomButton("EXCITATION STOP")
-        self.increase_excitation = CustomButton("+")
+        self.btn_turbine = CustomButton("TURBINE", "#6B20D2")
         self.btn_hydraulics = CustomButton("HYDRAULICS", "#0066cc")
         self.btn_electrical = CustomButton("ELECTRICAL", "#008080")
         
         controls_layout.addWidget(self.btn_emergency)
         controls_layout.addWidget(self.btn_reset)
         controls_layout.addWidget(self.ack_button)
-        controls_layout.addWidget(self.decrease_excitation)
-        controls_layout.addWidget(self.stop_excitation)
-        controls_layout.addWidget(self.increase_excitation)
+        controls_layout.addWidget(self.btn_turbine)
         controls_layout.addWidget(self.btn_hydraulics)
         controls_layout.addWidget(self.btn_electrical)
         main_layout.addLayout(controls_layout)
@@ -177,65 +175,48 @@ class HydroSimulator(QMainWindow):
         self.btn_emergency.clicked.connect(self.handle_emergency_stop)
         self.btn_reset.clicked.connect(self.handle_reset)
         self.ack_button.clicked.connect(self.acknowledge_alarms)
-        self.decrease_excitation.clicked.connect(lambda: setattr(self.engine, 'excitation_direction', -1))
-        self.stop_excitation.clicked.connect(lambda: setattr(self.engine, 'excitation_direction', 0))
-        self.increase_excitation.clicked.connect(lambda: setattr(self.engine, 'excitation_direction', 1))
+        self.btn_turbine.clicked.connect(self.toggle_turbine)
         self.btn_hydraulics.clicked.connect(self.toggle_hydraulics)
         self.btn_electrical.clicked.connect(self.toggle_electrical)
 
         # -----------------------------------------------------------------------------------------------------------
-        # Bottom Section (2): Gate controls
+        # Bottom Section (2): Sync
+        # -----------------------------------------------------------------------------------------------------------
+        sync_layout = QHBoxLayout()
+        self.sync_button = CustomButton("SYNC", "#800")
+        sync_layout.addWidget(self.sync_button)
+        main_layout.addLayout(sync_layout)
+        self.sync_button.clicked.connect(self.synchronise)
+
+        # -----------------------------------------------------------------------------------------------------------
+        # Bottom Section (3): Gate controls
         # -----------------------------------------------------------------------------------------------------------
         gate_layout = QHBoxLayout()
         self.increase_gate = CustomButton("+")
-        self.increase_gate_2 = CustomButton("+++")
+        self.increase_gate_2 = CustomButton("++")
+        self.increase_gate_3 = CustomButton("+++")
         self.decrease_gate = CustomButton("-")
-        self.decrease_gate_2 = CustomButton("---")
+        self.decrease_gate_2 = CustomButton("--")
+        self.decrease_gate_3 = CustomButton("---")
         self.stop_gate = CustomButton("STOP")
-        self.sync_button = CustomButton("SYNC", "#800")
         
+        gate_layout.addWidget(self.decrease_gate_3)
         gate_layout.addWidget(self.decrease_gate_2)
         gate_layout.addWidget(self.decrease_gate)
         gate_layout.addWidget(self.stop_gate)
         gate_layout.addWidget(self.increase_gate)
         gate_layout.addWidget(self.increase_gate_2)
-        gate_layout.addWidget(self.sync_button)
+        gate_layout.addWidget(self.increase_gate_3)
         main_layout.addLayout(gate_layout)
 
         # Link to functions
-        self.increase_gate.clicked.connect(lambda: self.set_gate_direction(1))
-        self.increase_gate_2.clicked.connect(lambda: self.set_gate_direction(5))
-        self.decrease_gate.clicked.connect(lambda: self.set_gate_direction(-1))
-        self.decrease_gate_2.clicked.connect(lambda: self.set_gate_direction(-5))
+        self.increase_gate.clicked.connect(lambda: self.set_gate_direction(0.2))
+        self.increase_gate_2.clicked.connect(lambda: self.set_gate_direction(1))
+        self.increase_gate_3.clicked.connect(lambda: self.set_gate_direction(5))
+        self.decrease_gate.clicked.connect(lambda: self.set_gate_direction(-0.2))
+        self.decrease_gate_2.clicked.connect(lambda: self.set_gate_direction(-1))
+        self.decrease_gate_3.clicked.connect(lambda: self.set_gate_direction(-5))
         self.stop_gate.clicked.connect(lambda: self.set_gate_direction(0))
-        self.sync_button.clicked.connect(self.synchronise)
-
-        # -----------------------------------------------------------------------------------------------------------
-        # Bottom Section (3): Alt water flow
-        # -----------------------------------------------------------------------------------------------------------
-        bypass_layout = QHBoxLayout()
-        self.decrease_drain = CustomButton("-")
-        self.stop_drain = CustomButton("DRAIN STOP")
-        self.increase_drain = CustomButton("+")
-        self.decrease_bypass = CustomButton("-")
-        self.stop_bypass = CustomButton("BYPASS STOP")
-        self.increase_bypass = CustomButton("+")
-        
-        bypass_layout.addWidget(self.decrease_drain)
-        bypass_layout.addWidget(self.stop_drain)
-        bypass_layout.addWidget(self.increase_drain)
-        bypass_layout.addWidget(self.decrease_bypass)
-        bypass_layout.addWidget(self.stop_bypass)
-        bypass_layout.addWidget(self.increase_bypass)
-        main_layout.addLayout(bypass_layout)
-
-        # Link to functions
-        self.decrease_drain.clicked.connect(lambda: setattr(self.engine, 'drain_direction', -1))
-        self.stop_drain.clicked.connect(lambda: setattr(self.engine, 'drain_direction', 0))
-        self.increase_drain.clicked.connect(lambda: setattr(self.engine, 'drain_direction', 1))
-        self.decrease_bypass.clicked.connect(lambda: setattr(self.engine, 'bypass_direction', -1))
-        self.stop_bypass.clicked.connect(lambda: setattr(self.engine, 'bypass_direction', 0))
-        self.increase_bypass.clicked.connect(lambda: setattr(self.engine, 'bypass_direction', 1))
         
         # -----------------------------------------------------------------------------------------------------------
         # Run simulation loops
@@ -289,7 +270,7 @@ class HydroSimulator(QMainWindow):
         if self.engine.sync:
             self.engine.sync = False
             playsound("Hydro 1\\breaker.mp3", block=False)
-        elif (self.engine.phase_diff < 3 or self.engine.phase_diff > 357) and not self.engine.sync and 2800 < self.engine.current_rpm < 3200:
+        elif (self.engine.phase_diff < 3 and self.engine.phase_diff > 357) and not self.engine.sync and self.engine.current_rpm > 2980 and self.engine.current_rpm < 3020:
             self.engine.sync = True
             self.engine.background_rpm = self.engine.current_rpm
             if 2 < self.engine.phase_diff < 358:
@@ -366,7 +347,7 @@ class HydroSimulator(QMainWindow):
         self.inflow_guage.set_value(self.engine.water_inflow)
         self.outflow_guage.set_value(outflow)
 
-        # hydraulics
+        # Hydraulics
         self.engine.update_hydraulics()
         self.hydraulics_win.res_gauge_1.set_value(self.engine.res_press_1)
         self.hydraulics_win.res_gauge_2.set_value(self.engine.res_press_2)
@@ -419,6 +400,7 @@ class HydroSimulator(QMainWindow):
         self.turbine_level_gauge.set_level(self.engine.turbine_water_level)
         self.low_hyd_pres.set_state(self.engine.hyd_coef <= 0.5)
         self.electrical_win.update_ui()
+        self.turbine_win.update_ui()
         
         # Turbine damage check
         if self.engine.turbine_water_level < 100:
@@ -443,6 +425,12 @@ class HydroSimulator(QMainWindow):
             self.electrical_win.hide()
         else:
             self.electrical_win.show()
+
+    def toggle_turbine(self):
+        if self.turbine_win.isVisible():
+            self.turbine_win.hide()
+        else:
+            self.turbine_win.show()
 
     def sound_callback(self, outdata, frames, time, status):
         # 1. Calculate turbine sound (hum and whirr)

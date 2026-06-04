@@ -1,0 +1,87 @@
+a = """        self.external_temp = 21.0
+        self.rain = False
+        self.sim_time = 0.0
+        self.water_inflow = 50.0
+        self.water_level = 70.0
+        self.sync = False
+        self.gate_opening = 0.0
+        self.is_emergency = False
+        self.gate_direction = 0.0
+        self.current_rpm = 0.0
+        self.background_rpm = 0.0
+        self.power = 0.0
+        self.excitation = 0.0
+        self.excitation_direction = 0.0
+        self.friction_coefficient = 0
+        self.turbine_inflow_variation = 0.0
+        self.damage = 0.0
+        self.flow_to_turbine = [0.0 for _ in range(50)]
+        self.turbine_water_level = 0.0
+        self.bypass_direction = 0.0
+        self.bypass_opening = 0.0
+        self.drain_direction = 0.0
+        self.drain_opening = 0.0
+        self.gen_phase = 0.0
+        self.grid_phase = 0.0
+        self.phase_diff = 0.0
+        self.phase_diff_prev = 0.0
+        self.oil_pump_direction = 0
+        self.oil_pump_power = 0
+        self.oil_pump_source = 0 # 0=ELEC., 1=SHAFT, 2=EM.
+        self.oil_temperature = self.external_temp
+        self.oil_preheater = False
+        self.heat_exc_direction = 0
+        self.heat_exc_flow = 0
+        self.pump1_state = 0  # 0: OFF, 1: STARTING, 2: RUNNING
+        self.pump2_state = 0
+        self.pump1_timer = 0.0
+        self.pump2_timer = 0.0
+        self.pump1_flow = 0.0
+        self.pump2_flow = 0.0
+        self.pump_selector = 1  # 1 or 2
+        self.fan1_state = 0  # 0: OFF, 1: STARTING, 2: RUNNING
+        self.fan2_state = 0
+        self.fan1_timer = 0.0
+        self.fan2_timer = 0.0
+        self.pre1_on = False
+        self.pre2_on = False
+        self.res_press_1 = 0
+        self.res_press_2 = 0
+        self.res_outflow_1 = 0
+        self.res_outflow_2 = 0
+        self.res_temp_1 = 20
+        self.res_temp_2 = 20
+        self.temp_decrease_timer_1 = 60
+        self.temp_decrease_timer_2 = 60
+        self.hyd_coef = 0
+        self.breaker_hv1s1 = False
+        self.breaker_hv1s2 = False
+        self.breaker_hv1ge = False
+        self.breaker_hv1ga = False
+        self.breaker_hv1gb = False
+        self.breaker_dc1dca = False
+        self.breaker_dc1dcb = False
+        self.breaker_lv1dg = False
+        self.breaker_lv1dgs = False
+        self.breaker_lv1em = False
+        self.ac_bus_a = False
+        self.ac_bus_a_usage = 0
+        self.ac_bus_b = False
+        self.ac_bus_b_usage = 0
+        self.dc_bus = False
+        self.battery_charge = 5.0
+        self.gen_island = False
+        self.edg_started = False
+        self.SAMPLE_RATE = 44100"""
+
+c = []
+b = a.split("\n")
+for i in b:
+    i = i.strip()
+    i = i[5:]
+    i = i.split("=", 1)
+    i = i[0]
+    i = i.strip()
+    c.append(i)
+for i in range(0,len(c)):
+    print(f"{c[i]} = self.{c[i]}")

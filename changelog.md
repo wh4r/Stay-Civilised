@@ -1,0 +1,11 @@
+## v0.4.0
+- Fixed sync parameters (i think its still broken idk why)
+- Fixed Res. 2 press. labelled with 1
+- Added option to specify decimal places in gauges (defaults to 1)
+- Gate guage displays 3dp now
+- Moved bypass and drain to turbine panel
+- Added sensitive gate control
+- Added turbine panel
+    - Turbine controls moved to this panel
+    - Added lubrcation system
+- Turbine oil system added

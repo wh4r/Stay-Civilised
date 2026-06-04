@@ -4,6 +4,10 @@ from buttons import CustomButton
 from gauges import UniversalGauge
 from annunciators import Annunciator
 
+# === TO DO ===
+# Option to drive pumps using turbine instead of electricity
+
+
 class HydraulicsWindow(QWidget):
     def __init__(self, engine):
         super().__init__()
@@ -22,7 +26,7 @@ class HydraulicsWindow(QWidget):
         self.res_gauge_1 = UniversalGauge(title="Res. 1 pressure", unit="%") # Replace with actual values using multiplier
         self.res_gauge_2 = UniversalGauge(title="Res. 2 pressure", unit="%")
         self.res_temp_1 = UniversalGauge(title="Res. 1 temp", unit="°", min_val=20, max_val=50)
-        self.res_temp_2 = UniversalGauge(title="Res. 1 temp", unit="°", min_val=20, max_val=50)
+        self.res_temp_2 = UniversalGauge(title="Res. 2 temp", unit="°", min_val=20, max_val=50)
         gauge_layout.addWidget(self.res_gauge_1)
         gauge_layout.addWidget(self.res_gauge_2)
         gauge_layout.addWidget(self.res_temp_1)
@@ -56,7 +60,7 @@ class HydraulicsWindow(QWidget):
         pump_group.addLayout(p2_layout)
 
 
-        # Pump Selector
+        # Reservoir Selector
         sel_layout = QHBoxLayout()
         sel_layout.addWidget(QLabel("Res. Selector:"))
         self.btn_sel_1 = CustomButton("P1")
