@@ -111,9 +111,9 @@ class SimulationEngine:
         self.OS = platform.system()
 
     def play_breaker_sound(self):
-        if self.os == "Windows":
+        if self.OS == "Windows":
             playsound("Hydro 1\\breaker.mp3", block=False)
-        elif self.os == "Darwin":
+        elif self.OS == "Darwin":
             playsound("Hydro 1/breaker.mp3", block=False)
         else:
             print("The code is broken (or you're on linux)")
