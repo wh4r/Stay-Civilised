@@ -1,6 +1,7 @@
 import math
 import random
 from playsound3 import playsound
+import platform
 
 class SimulationEngine:
     def __init__(self):
@@ -107,6 +108,15 @@ class SimulationEngine:
         
         # Constants
         self.SAMPLE_RATE = 44100
+        self.OS = platform.system()
+
+    def play_breaker_sound(self):
+        if self.os == "Windows":
+            playsound("Hydro 1\\breaker.mp3", block=False)
+        elif self.os == "Darwin":
+            playsound("Hydro 1/breaker.mp3", block=False)
+        else:
+            print("The code is broken (or you're on linux)")
 
     def save_file(self, filename):
         pass
@@ -234,7 +244,7 @@ class SimulationEngine:
             else:
                 self.dc_bus = False
                 self.dc_bus_unpowered()
-        playsound("Hydro 1\\breaker.mp3", block=False)
+        self.play_breaker_sound()
         # bus b only has 1 input so no need for interlock
 
 

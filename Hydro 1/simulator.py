@@ -269,20 +269,21 @@ class HydroSimulator(QMainWindow):
     def synchronise(self):
         if self.engine.sync:
             self.engine.sync = False
-            playsound("Hydro 1\\breaker.mp3", block=False)
+            self.engine.play_breaker_sound()
         elif (self.engine.phase_diff < 3 and self.engine.phase_diff > 357) and not self.engine.sync and self.engine.current_rpm > 2980 and self.engine.current_rpm < 3020:
             self.engine.sync = True
+            self.engine.breaker_hv1ge = True
             self.engine.background_rpm = self.engine.current_rpm
             if 2 < self.engine.phase_diff < 358:
                 self.engine.add_damage(1.0)
             if self.engine.excitation < 490 or self.engine.excitation > 510:
                 self.engine.add_damage(abs(self.engine.excitation-500))
                 self.engine.sync = False
-                playsound("Hydro 1\\breaker.mp3", block=False)
+                self.engine.play_breaker_sound()
         else:
             self.engine.sync = False
             self.engine.add_damage(abs(self.engine.phase_diff-180))
-            playsound("Hydro 1\\breaker.mp3", block=False)
+            self.engine.play_breaker_sound()
         
     def set_gate_direction(self, direction):
         if not self.engine.is_emergency:
