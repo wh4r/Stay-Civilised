@@ -1,6 +1,7 @@
 import sys
 from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel
 from PyQt6.QtCore import Qt, QTimer
+from PyQt6.QtGui import QAction
 import numpy as np
 import sounddevice as sd
 from playsound3 import playsound
@@ -13,6 +14,8 @@ from calculation import SimulationEngine
 from hydraulics import HydraulicsWindow
 from electrical import ElectricalWindow
 from turbine import TurbineWindow
+from save_dialogue import SaveWindow
+from load_dialogue import LoadWindow
 
 class HydroSimulator(QMainWindow):
     def __init__(self):
@@ -32,6 +35,12 @@ class HydroSimulator(QMainWindow):
         # Turbine Window
         self.turbine_win = TurbineWindow(self.engine)
 
+        # Save Window
+        self.save_win = SaveWindow(self.engine)
+
+        # Load Window
+        self.load_win = LoadWindow(self.engine)
+
         # Set sound
         self.turbine_phase_hum = 0.0
         self.turbine_phase_whirr = 0.0
@@ -40,10 +49,44 @@ class HydroSimulator(QMainWindow):
         self.alarm_phases = {}
         self.stream = sd.OutputStream(channels=1, callback=self.sound_callback, samplerate=self.engine.SAMPLE_RATE)
         self.stream.start()
+        self.silence_sounds = False
 
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
         main_layout = QVBoxLayout(central_widget)
+
+        menu_bar = self.menuBar()
+        file_menu = menu_bar.addMenu('&File')
+        save_action = QAction('&Save', self)
+        if self.engine.OS == "Windows":
+            save_action.setShortcut('Ctrl+S')
+        else:
+            save_action.setShortcut('Meta+S')
+        save_action.triggered.connect(self.save_win.show)
+
+        load_action = QAction('&Load', self)
+        if self.engine.OS == "Windows":
+            load_action.setShortcut('Ctrl+O')
+        else:
+            load_action.setShortcut('Meta+O')
+        load_action.triggered.connect(self.load_win.show)
+        
+        exit_action = QAction('&Exit', self)
+        if self.engine.OS == "Windows":
+            exit_action.setShortcut('Ctrl+Q')
+        else:
+            exit_action.setShortcut('Meta+Q')
+        exit_action.triggered.connect(exit)
+        
+        file_menu.addAction(save_action)
+        file_menu.addSeparator()
+        file_menu.addAction(load_action)
+        file_menu.addSeparator()
+        file_menu.addAction(exit_action)
+        
+        help_menu = menu_bar.addMenu('&Help')
+        about_action = QAction('&About', self)
+        help_menu.addAction(about_action)
 
         # -----------------------------------------------------------------------------------------------------------
         # Top Section (1): annunciators
@@ -156,6 +199,7 @@ class HydroSimulator(QMainWindow):
         # Bottom Section (1): Dangerous controls
         # -----------------------------------------------------------------------------------------------------------
         controls_layout = QHBoxLayout()
+        self.silence = CustomButton("SILENCE", "#800")
         self.btn_emergency = CustomButton("TRIP", "#800")
         self.btn_reset = CustomButton("RESET TRIP", "#800")
         self.ack_button = CustomButton("ACKNOWLEDGE", "#444")
@@ -163,6 +207,7 @@ class HydroSimulator(QMainWindow):
         self.btn_hydraulics = CustomButton("HYDRAULICS", "#0066cc")
         self.btn_electrical = CustomButton("ELECTRICAL", "#008080")
         
+        controls_layout.addWidget(self.silence)
         controls_layout.addWidget(self.btn_emergency)
         controls_layout.addWidget(self.btn_reset)
         controls_layout.addWidget(self.ack_button)
@@ -172,6 +217,7 @@ class HydroSimulator(QMainWindow):
         main_layout.addLayout(controls_layout)
 
         # link buttons
+        self.silence.clicked.connect(self.silence_func)
         self.btn_emergency.clicked.connect(self.handle_emergency_stop)
         self.btn_reset.clicked.connect(self.handle_reset)
         self.ack_button.clicked.connect(self.acknowledge_alarms)
@@ -244,6 +290,9 @@ class HydroSimulator(QMainWindow):
         self.slow_timer = QTimer()
         self.slow_timer.timeout.connect(self.sim_loop_slow)
         self.slow_timer.start(1000)
+
+    def silence_func(self):
+        self.silence_sounds = not self.silence_sounds
 
     def update_water_inflow(self):
         self.engine.update_water_flow()
@@ -434,54 +483,60 @@ class HydroSimulator(QMainWindow):
             self.turbine_win.show()
 
     def sound_callback(self, outdata, frames, time, status):
-        # 1. Calculate turbine sound (hum and whirr)
-        rpm = self.engine.current_rpm
+        # 1. ALWAYS initialize the chunk with zeros right at the start
+        # This acts as our safety net. If we're muted, it just stays dead silent.
         chunk = np.zeros(frames, dtype=np.float32)
         
-        if rpm >= 1:
-            max_volume = 0.2
-            volume = max(0.0, min(max_volume, ((rpm - 1) / (100 - 1)) * max_volume))
-            base_freq = 50 + (rpm / 6000) * 500
-            phase_inc_hum = 2 * np.pi * base_freq / self.engine.SAMPLE_RATE
-            phase_inc_whirr = 2 * np.pi * base_freq * 3 / self.engine.SAMPLE_RATE
+        if not self.silence_sounds:
+            # 2. Calculate turbine sound
+            rpm = self.engine.current_rpm
             
-            for i in range(frames):
-                chunk[i] = volume * (np.sin(self.turbine_phase_hum) + 0.3 * np.sin(self.turbine_phase_whirr))
-                self.turbine_phase_hum += phase_inc_hum
-                self.turbine_phase_whirr += phase_inc_whirr
-            
-            self.turbine_phase_hum %= 2 * np.pi
-            self.turbine_phase_whirr %= 2 * np.pi
+            if rpm >= 1:
+                max_volume = 0.2
+                volume = max(0.0, min(max_volume, ((rpm - 1) / (100 - 1)) * max_volume))
+                base_freq = 50 + (rpm / 6000) * 500
+                phase_inc_hum = 2 * np.pi * base_freq / self.engine.SAMPLE_RATE
+                phase_inc_whirr = 2 * np.pi * base_freq * 3 / self.engine.SAMPLE_RATE
+                
+                for i in range(frames):
+                    chunk[i] = volume * (np.sin(self.turbine_phase_hum) + 0.3 * np.sin(self.turbine_phase_whirr))
+                    self.turbine_phase_hum += phase_inc_hum
+                    self.turbine_phase_whirr += phase_inc_whirr
+                
+                self.turbine_phase_hum %= 2 * np.pi
+                self.turbine_phase_whirr %= 2 * np.pi
 
-        # 2. Add alarm sounds if any are active
-        active_freqs = getattr(self, 'active_sound_freqs', [])
-        if active_freqs:
-            cycle_samples = int(self.engine.SAMPLE_RATE * 0.5)  # 500 ms cycle
-            on_samples = int(self.engine.SAMPLE_RATE * 0.2)     # 200 ms beep
-            
-            # Generate the alarm waves
-            for i in range(frames):
-                cycle_pos = (self.alarm_sample_index + i) % cycle_samples
-                if cycle_pos < on_samples:
-                    # Alarm is in the "ON" part of the beep cycle
-                    alarm_signal = 0.0
-                    for freq in active_freqs:
-                        # Get or initialize phase for this frequency
-                        phase = self.alarm_phases.get(freq, 0.0)
-                        alarm_signal += np.sin(phase)
-                        # Increment phase
-                        phase += 2 * np.pi * freq / self.engine.SAMPLE_RATE
-                        self.alarm_phases[freq] = phase % (2 * np.pi)
-                    
-                    # Normalize alarm volume so it doesn't clip
-                    alarm_volume = 0.15
-                    chunk[i] += (alarm_signal / len(active_freqs)) * alarm_volume
-            
-            self.alarm_sample_index = (self.alarm_sample_index + frames) % cycle_samples
+            # 3. Add alarm sounds if any are active
+            active_freqs = getattr(self, 'active_sound_freqs', [])
+            if active_freqs:
+                cycle_samples = int(self.engine.SAMPLE_RATE * 0.5)  # 500 ms cycle
+                on_samples = int(self.engine.SAMPLE_RATE * 0.2)     # 200 ms beep
+                
+                # Generate the alarm waves
+                for i in range(frames):
+                    cycle_pos = (self.alarm_sample_index + i) % cycle_samples
+                    if cycle_pos < on_samples:
+                        # Alarm is in the "ON" part of the beep cycle
+                        alarm_signal = 0.0
+                        for freq in active_freqs:
+                            phase = self.alarm_phases.get(freq, 0.0)
+                            alarm_signal += np.sin(phase)
+                            phase += 2 * np.pi * freq / self.engine.SAMPLE_RATE
+                            self.alarm_phases[freq] = phase % (2 * np.pi)
+                        
+                        alarm_volume = 0.15
+                        chunk[i] += (alarm_signal / len(active_freqs)) * alarm_volume
+                
+                self.alarm_sample_index = (self.alarm_sample_index + frames) % cycle_samples
+            else:
+                self.alarm_sample_index = 0
+                self.alarm_phases.clear()
         else:
+            # If muted, reset the alarm trackers so they don't get out of sync or pop when unmuted
             self.alarm_sample_index = 0
             self.alarm_phases.clear()
-            
+                
+        # 4. This will now safely push out either your audio or pure silence
         outdata[:] = chunk.reshape(-1, 1)
 
 if __name__ == "__main__":

@@ -3,6 +3,14 @@ from PyQt6.QtCore import Qt
 
 class Annunciator(QLabel):
     def __init__(self, text, alert_color="red", persistent=True, sound_freq=None):
+        """
+        A custom styled annunciator.
+        
+        :param text: Text to display on the annunciator
+        :param alert_color: Color of the annunciator when it is active
+        :param persistent: Whether the annunciator needs to be acknowledged
+        :param sound_freq: Frequency of sound played when annunciator is active
+        """
         super().__init__(text)
         self.alert_color = alert_color
         self.active = False

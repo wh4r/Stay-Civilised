@@ -110,4 +110,4 @@ for i in b:
         i = i.strip()
         c.append(i)
 for i in range(0,len(c)):
-    print(f"'{c[i]}': self.{c[i]},")
+    print(f"self.{c[i]} = load_data['{c[i]}']")

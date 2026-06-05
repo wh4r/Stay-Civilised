@@ -3,6 +3,12 @@ from PyQt6.QtWidgets import QPushButton
 class CustomButton(QPushButton):
     # Draws a button (link to function using lambda)
     def __init__(self, text, color="#444"):
+        """
+        A custom styled button.
+        
+        :param text: Text to display on the button
+        :param color: Colour of the button
+        """
         super().__init__(text)
         self.setStyleSheet(f"""
             QPushButton {{

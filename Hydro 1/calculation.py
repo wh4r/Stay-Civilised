@@ -2,6 +2,8 @@ import math
 import random
 from playsound3 import playsound
 import platform
+import json
+from datetime import datetime
 
 class SimulationEngine:
     def __init__(self):
@@ -110,6 +112,174 @@ class SimulationEngine:
         self.SAMPLE_RATE = 44100
         self.OS = platform.system()
 
+    def load_file(self, filepath=None):
+        try:
+            with open(filepath, 'r') as f:
+                load_data = json.load(f)
+                self.external_temp = load_data['external_temp']
+                self.rain = load_data['rain']
+                self.sim_time = load_data['sim_time']
+                self.water_inflow = load_data['water_inflow']
+                self.water_level = load_data['water_level']
+                self.sync = load_data['sync']
+                self.gate_opening = load_data['gate_opening']
+                self.is_emergency = load_data['is_emergency']
+                self.gate_direction = load_data['gate_direction']
+                self.current_rpm = load_data['current_rpm']
+                self.background_rpm = load_data['background_rpm']
+                self.power = load_data['power']
+                self.excitation = load_data['excitation']
+                self.excitation_direction = load_data['excitation_direction']
+                self.friction_coefficient = load_data['friction_coefficient']
+                self.turbine_inflow_variation = load_data['turbine_inflow_variation']
+                self.damage = load_data['damage']
+                self.flow_to_turbine = load_data['flow_to_turbine']
+                self.turbine_water_level = load_data['turbine_water_level']
+                self.bypass_direction = load_data['bypass_direction']
+                self.bypass_opening = load_data['bypass_opening']
+                self.drain_direction = load_data['drain_direction']
+                self.drain_opening = load_data['drain_opening']
+                self.gen_phase = load_data['gen_phase']
+                self.grid_phase = load_data['grid_phase']
+                self.phase_diff = load_data['phase_diff']
+                self.phase_diff_prev = load_data['phase_diff_prev']
+                self.oil_pump_direction = load_data['oil_pump_direction']
+                self.oil_pump_power = load_data['oil_pump_power']
+                self.oil_temperature = load_data['oil_temperature']
+                self.oil_preheater = load_data['oil_preheater']
+                self.heat_exc_direction = load_data['heat_exc_direction']
+                self.heat_exc_flow = load_data['heat_exc_flow']
+                self.pump2_state = load_data['pump2_state']
+                self.pump1_timer = load_data['pump1_timer']
+                self.pump2_timer = load_data['pump2_timer']
+                self.pump1_flow = load_data['pump1_flow']
+                self.pump2_flow = load_data['pump2_flow']
+                self.fan2_state = load_data['fan2_state']
+                self.fan1_timer = load_data['fan1_timer']
+                self.fan2_timer = load_data['fan2_timer']
+                self.pre1_on = load_data['pre1_on']
+                self.pre2_on = load_data['pre2_on']
+                self.res_press_1 = load_data['res_press_1']
+                self.res_press_2 = load_data['res_press_2']
+                self.res_outflow_1 = load_data['res_outflow_1']
+                self.res_outflow_2 = load_data['res_outflow_2']
+                self.res_temp_1 = load_data['res_temp_1']
+                self.res_temp_2 = load_data['res_temp_2']
+                self.temp_decrease_timer_1 = load_data['temp_decrease_timer_1']
+                self.temp_decrease_timer_2 = load_data['temp_decrease_timer_2']
+                self.hyd_coef = load_data['hyd_coef']
+                self.breaker_hv1s1 = load_data['breaker_hv1s1']
+                self.breaker_hv1s2 = load_data['breaker_hv1s2']
+                self.breaker_hv1ge = load_data['breaker_hv1ge']
+                self.breaker_hv1ga = load_data['breaker_hv1ga']
+                self.breaker_hv1gb = load_data['breaker_hv1gb']
+                self.breaker_dc1dca = load_data['breaker_dc1dca']
+                self.breaker_dc1dcb = load_data['breaker_dc1dcb']
+                self.breaker_lv1dg = load_data['breaker_lv1dg']
+                self.breaker_lv1dgs = load_data['breaker_lv1dgs']
+                self.breaker_lv1em = load_data['breaker_lv1em']
+                self.ac_bus_a = load_data['ac_bus_a']
+                self.ac_bus_a_usage = load_data['ac_bus_a_usage']
+                self.ac_bus_b = load_data['ac_bus_b']
+                self.ac_bus_b_usage = load_data['ac_bus_b_usage']
+                self.dc_bus = load_data['dc_bus']
+                self.battery_charge = load_data['battery_charge']
+                self.gen_island = load_data['gen_island']
+                self.edg_started = load_data['edg_started']
+        except Exception as e:
+            print('explode', e)
+
+    def save_file(self, filename=None):
+        save_variables = {
+            'external_temp': self.external_temp,
+            'rain': self.rain,
+            'sim_time': self.sim_time,
+            'water_inflow': self.water_inflow,
+            'water_level': self.water_level,
+            'sync': self.sync,
+            'gate_opening': self.gate_opening,
+            'is_emergency': self.is_emergency,
+            'gate_direction': self.gate_direction,
+            'current_rpm': self.current_rpm,
+            'background_rpm': self.background_rpm,
+            'power': self.power,
+            'excitation': self.excitation,
+            'excitation_direction': self.excitation_direction,
+            'friction_coefficient': self.friction_coefficient,
+            'turbine_inflow_variation': self.turbine_inflow_variation,
+            'damage': self.damage,
+            'flow_to_turbine': self.flow_to_turbine,
+            'turbine_water_level': self.turbine_water_level,
+            'bypass_direction': self.bypass_direction,
+            'bypass_opening': self.bypass_opening,
+            'drain_direction': self.drain_direction,
+            'drain_opening': self.drain_opening,
+            'gen_phase': self.gen_phase,
+            'grid_phase': self.grid_phase,
+            'phase_diff': self.phase_diff,
+            'phase_diff_prev': self.phase_diff_prev,
+            'oil_pump_direction': self.oil_pump_direction,
+            'oil_pump_power': self.oil_pump_power,
+            'oil_temperature': self.oil_temperature,
+            'oil_preheater': self.oil_preheater,
+            'heat_exc_direction': self.heat_exc_direction,
+            'heat_exc_flow': self.heat_exc_flow,
+            'pump2_state': self.pump2_state,
+            'pump1_timer': self.pump1_timer,
+            'pump2_timer': self.pump2_timer,
+            'pump1_flow': self.pump1_flow,
+            'pump2_flow': self.pump2_flow,
+            'fan2_state': self.fan2_state,
+            'fan1_timer': self.fan1_timer,
+            'fan2_timer': self.fan2_timer,
+            'pre1_on': self.pre1_on,
+            'pre2_on': self.pre2_on,
+            'res_press_1': self.res_press_1,
+            'res_press_2': self.res_press_2,
+            'res_outflow_1': self.res_outflow_1,
+            'res_outflow_2': self.res_outflow_2,
+            'res_temp_1': self.res_temp_1,
+            'res_temp_2': self.res_temp_2,
+            'temp_decrease_timer_1': self.temp_decrease_timer_1,
+            'temp_decrease_timer_2': self.temp_decrease_timer_2,
+            'hyd_coef': self.hyd_coef,
+            'breaker_hv1s1': self.breaker_hv1s1,
+            'breaker_hv1s2': self.breaker_hv1s2,
+            'breaker_hv1ge': self.breaker_hv1ge,
+            'breaker_hv1ga': self.breaker_hv1ga,
+            'breaker_hv1gb': self.breaker_hv1gb,
+            'breaker_dc1dca': self.breaker_dc1dca,
+            'breaker_dc1dcb': self.breaker_dc1dcb,
+            'breaker_lv1dg': self.breaker_lv1dg,
+            'breaker_lv1dgs': self.breaker_lv1dgs,
+            'breaker_lv1em': self.breaker_lv1em,
+            'ac_bus_a': self.ac_bus_a,
+            'ac_bus_a_usage': self.ac_bus_a_usage,
+            'ac_bus_b': self.ac_bus_b,
+            'ac_bus_b_usage': self.ac_bus_b_usage,
+            'dc_bus': self.dc_bus,
+            'battery_charge': self.battery_charge,
+            'gen_island': self.gen_island,
+            'edg_started': self.edg_started
+        }
+        if self.OS == "Windows":
+            path = "Hydro 1\\saves\\"
+        elif self.OS == "Darwin":
+            path = "Hydro 1/saves/"
+        else:
+            print("The code is broken (or you're on linux)")
+        if not filename:
+            filename = f"{path}{datetime.now().strftime("%Y%m%d_%H%M%S")}"
+        else:
+            filename = f"{path}{filename}"
+        try:
+            with open(filename, 'w') as f:
+                json.dump(save_variables, f, indent=4)
+            print(f"saved to {filename}")
+        except Exception as e:
+            print(f"file blew up: {e}")
+
+
     def play_breaker_sound(self):
         if self.OS == "Windows":
             playsound("Hydro 1\\breaker.mp3", block=False)
@@ -117,9 +287,6 @@ class SimulationEngine:
             playsound("Hydro 1/breaker.mp3", block=False)
         else:
             print("The code is broken (or you're on linux)")
-
-    def save_file(self, filename):
-        pass
 
     def oil_preheat(self):
         self.oil_preheater = not self.oil_preheater
