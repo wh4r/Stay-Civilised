@@ -2,6 +2,8 @@
 
 [![Trello](https://img.shields.io/badge/trello-8A2BE2)](https://trello.com/w/stayciviliseddev)
 
+<img width="976" height="1104" alt="logo" src="https://github.com/user-attachments/assets/f66ac053-5f1c-453e-a524-373f0d3fc5fc" />
+
 ## Quickstart (Windows)
 **Clone repo**
 ```cmd
