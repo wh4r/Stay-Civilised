@@ -16,12 +16,15 @@ from electrical import ElectricalWindow
 from turbine import TurbineWindow
 from save_dialogue import SaveWindow
 from load_dialogue import LoadWindow
+from about_project import AboutWindow
+from log import LogWindow
 
 class HydroSimulator(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Hydroelectric Plant Control System")
         self.setStyleSheet("background-color: #121212;")
+        self.setFixedSize(1130, 730)
 
         # Initialize simulation engine
         self.engine = SimulationEngine()
@@ -40,6 +43,12 @@ class HydroSimulator(QMainWindow):
 
         # Load Window
         self.load_win = LoadWindow(self.engine)
+
+        # About window
+        self.about_win = AboutWindow()
+
+        # Log window
+        self.log_win = LogWindow(self.engine)
 
         # Set sound
         self.turbine_phase_hum = 0.0
@@ -86,7 +95,25 @@ class HydroSimulator(QMainWindow):
         
         help_menu = menu_bar.addMenu('&Help')
         about_action = QAction('&About', self)
+        about_action.triggered.connect(self.toggle_about)
         help_menu.addAction(about_action)
+
+        window_menu = menu_bar.addMenu('&Window')
+        turbine_window = QAction('&Turbine', self)
+        turbine_window.setShortcut('1')
+        turbine_window.triggered.connect(self.toggle_turbine)
+        window_menu.addAction(turbine_window)
+        hydraulics_window = QAction('&Hydraulics', self)
+        hydraulics_window.setShortcut('2')
+        hydraulics_window.triggered.connect(self.toggle_hydraulics)
+        window_menu.addAction(hydraulics_window)
+        electrical_window = QAction('&Electrical', self)
+        electrical_window.setShortcut('3')
+        electrical_window.triggered.connect(self.toggle_electrical)
+        window_menu.addAction(electrical_window)
+        log_window = QAction('&Log', self)
+        log_window.triggered.connect(self.toggle_log)
+        window_menu.addAction(log_window)
 
         # -----------------------------------------------------------------------------------------------------------
         # Top Section (1): annunciators
@@ -98,7 +125,7 @@ class HydroSimulator(QMainWindow):
         self.high_acceleration = Annunciator("HIGH ACCEL.", "red", persistent=True, sound_freq=770)
         self.reverse_power = Annunciator("REVERSE POWER", "red", persistent=True, sound_freq=880)
         self.sync_ready = Annunciator("SYNC READY", "green", persistent=False)
-        self.placeholder = Annunciator(".", "gray", persistent=False)
+        self.oil_temp = Annunciator("OIL TEMP", "red", persistent=False)
 
         annunc_layout.addWidget(self.alarm_interlock)
         annunc_layout.addWidget(self.alarm_low_water)
@@ -106,7 +133,7 @@ class HydroSimulator(QMainWindow):
         annunc_layout.addWidget(self.high_acceleration)
         annunc_layout.addWidget(self.sync_ready)
         annunc_layout.addWidget(self.reverse_power)
-        annunc_layout.addWidget(self.placeholder)
+        annunc_layout.addWidget(self.oil_temp)
         main_layout.addLayout(annunc_layout)
 
         # -----------------------------------------------------------------------------------------------------------
@@ -131,7 +158,7 @@ class HydroSimulator(QMainWindow):
         main_layout.addLayout(annunc_layout_2)
 
         # -----------------------------------------------------------------------------------------------------------
-        # Top Section (2): annunciators
+        # Top Section (3): annunciators
         # -----------------------------------------------------------------------------------------------------------
         annunc_layout_3 = QHBoxLayout()
         self.placeholder_1 = Annunciator(".", "gray", persistent=False)
@@ -156,9 +183,7 @@ class HydroSimulator(QMainWindow):
         # -----------------------------------------------------------------------------------------------------------
         gauges_layout = QHBoxLayout()
         self.level_gauge = LevelGauge("Forebay Level")
-        self.turbine_level_gauge = LevelGauge("Turbine level")
-        self.drain_gauge = LevelGauge("Drain", [255,0,100])
-        self.bypass_gauge = LevelGauge("Bypasss", [255,0,100])
+        
         self.rpm_gauge = UniversalGauge("Turbine RPM", 0, 4000, "RPM")
         self.freq_gauge = UniversalGauge("Frequency", 45, 65, "Hz")
         self.gate_guage = UniversalGauge("Gate", 0, 100, "%", dp=3)
@@ -167,9 +192,6 @@ class HydroSimulator(QMainWindow):
         self.power_gauge = UniversalGauge("Power", -10, 100, "MW")
         
         gauges_layout.addWidget(self.level_gauge)
-        gauges_layout.addWidget(self.turbine_level_gauge)
-        gauges_layout.addWidget(self.drain_gauge)
-        gauges_layout.addWidget(self.bypass_gauge)
         gauges_layout.addWidget(self.rpm_gauge)
         gauges_layout.addWidget(self.freq_gauge)
         gauges_layout.addWidget(self.gate_guage)
@@ -203,27 +225,18 @@ class HydroSimulator(QMainWindow):
         self.btn_emergency = CustomButton("TRIP", "#800")
         self.btn_reset = CustomButton("RESET TRIP", "#800")
         self.ack_button = CustomButton("ACKNOWLEDGE", "#444")
-        self.btn_turbine = CustomButton("TURBINE", "#6B20D2")
-        self.btn_hydraulics = CustomButton("HYDRAULICS", "#0066cc")
-        self.btn_electrical = CustomButton("ELECTRICAL", "#008080")
         
         controls_layout.addWidget(self.silence)
         controls_layout.addWidget(self.btn_emergency)
         controls_layout.addWidget(self.btn_reset)
         controls_layout.addWidget(self.ack_button)
-        controls_layout.addWidget(self.btn_turbine)
-        controls_layout.addWidget(self.btn_hydraulics)
-        controls_layout.addWidget(self.btn_electrical)
         main_layout.addLayout(controls_layout)
 
         # link buttons
-        self.silence.clicked.connect(self.silence_func)
+        self.silence.clicked.connect(lambda: setattr(self, "silence_sounds", not self.silence_sounds))
         self.btn_emergency.clicked.connect(self.handle_emergency_stop)
         self.btn_reset.clicked.connect(self.handle_reset)
         self.ack_button.clicked.connect(self.acknowledge_alarms)
-        self.btn_turbine.clicked.connect(self.toggle_turbine)
-        self.btn_hydraulics.clicked.connect(self.toggle_hydraulics)
-        self.btn_electrical.clicked.connect(self.toggle_electrical)
 
         # -----------------------------------------------------------------------------------------------------------
         # Bottom Section (2): Sync
@@ -291,9 +304,6 @@ class HydroSimulator(QMainWindow):
         self.slow_timer.timeout.connect(self.sim_loop_slow)
         self.slow_timer.start(1000)
 
-    def silence_func(self):
-        self.silence_sounds = not self.silence_sounds
-
     def update_water_inflow(self):
         self.engine.update_water_flow()
 
@@ -301,7 +311,6 @@ class HydroSimulator(QMainWindow):
         # use this for optimisations
         self.electrical_win.update_ui()
         self.engine.update_battery()
-        pass
 
     def loop_1s(self):
         self.engine.update_res_temp()
@@ -337,6 +346,7 @@ class HydroSimulator(QMainWindow):
     def set_gate_direction(self, direction):
         if not self.engine.is_emergency:
             self.engine.gate_direction = direction
+        self.engine.log(f"Gate {direction}")
 
     def handle_emergency_stop(self):
         self.engine.is_emergency = True
@@ -447,7 +457,7 @@ class HydroSimulator(QMainWindow):
         # UI Updates
         self.damage_guage.set_value(self.engine.damage)
         self.excitation_gauge.set_value(self.engine.excitation)
-        self.turbine_level_gauge.set_level(self.engine.turbine_water_level)
+        self.turbine_win.turbine_level_gauge.set_level(self.engine.turbine_water_level)
         self.low_hyd_pres.set_state(self.engine.hyd_coef <= 0.5)
         self.electrical_win.update_ui()
         self.turbine_win.update_ui()
@@ -459,10 +469,23 @@ class HydroSimulator(QMainWindow):
                 self.engine.turbine_water_level = 100
         
         self.engine.update_drain_bypass_pos()
-        self.drain_gauge.set_level(self.engine.drain_opening)
-        self.bypass_gauge.set_level(self.engine.bypass_opening)
+        self.turbine_win.drain_gauge.set_level(self.engine.drain_opening)
+        self.turbine_win.bypass_gauge.set_level(self.engine.bypass_opening)
         self.engine.update_excitation()
         self.gate_guage.set_value(self.engine.gate_opening)
+
+        # Turbine systems update
+        self.engine.turbine_systems()
+        self.turbine_win.update_ui()
+        self.oil_temp.set_state(self.engine.oil_temperature >= 85)
+        if self.engine.oil_temperature >= 90:
+            self.handle_emergency_stop()
+    
+    def toggle_about(self):
+        if self.about_win.isVisible():
+            self.about_win.hide()
+        else:
+            self.about_win.show()
 
     def toggle_hydraulics(self):
         if self.hydraulics_win.isVisible():
@@ -481,6 +504,12 @@ class HydroSimulator(QMainWindow):
             self.turbine_win.hide()
         else:
             self.turbine_win.show()
+
+    def toggle_log(self):
+        if self.log_win.isVisible():
+            self.log_win.hide()
+        else:
+            self.log_win.show()
 
     def sound_callback(self, outdata, frames, time, status):
         # 1. ALWAYS initialize the chunk with zeros right at the start

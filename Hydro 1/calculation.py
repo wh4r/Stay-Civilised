@@ -279,6 +279,39 @@ class SimulationEngine:
         except Exception as e:
             print(f"file blew up: {e}")
 
+    def read_log(self):
+        if self.OS == "Windows":
+            path = "Hydro 1\\log.txt"
+        elif self.OS == "Darwin":
+            path = "Hydro 1/log.txt"
+        else:
+            print("The code is broken (or you're on linux)")
+        with open(path, "r") as f:
+            return f.readlines()
+
+    def log(self, log = 'error'):
+        if self.OS == "Windows":
+            path = "Hydro 1\\log.txt"
+        elif self.OS == "Darwin":
+            path = "Hydro 1/log.txt"
+        else:
+            print("The code is broken (or you're on linux)")
+        with open(path, "a") as f:
+            f.write(f"{self.sim_time} {log}")
+
+    
+    def turbine_systems(self):
+        self.oil_pump_power = max(0.0, min(100.0, self.oil_pump_power + self.oil_pump_direction)) if self.ac_bus_a else 0
+        self.heat_exc_flow = max(0.0, min(100.0, self.heat_exc_flow + self.heat_exc_direction)) * self.hyd_coef
+        self.oil_temperature += (max(self.current_rpm-500, 0) / 2500) * (1/self.oil_temperature)
+        if self.oil_preheater and self.ac_bus_a:
+            self.oil_temperature += 0.1 * (1/self.oil_temperature)
+        if self.oil_pump_source == 0 and self.ac_bus_a:
+            self.oil_temperature -= (self.oil_pump_power/100) * (self.heat_exc_flow/100) * 0.1 * ((self.oil_temperature-self.external_temp)/100)
+        elif self.oil_pump_source == 1:
+            self.oil_temperature -= (self.current_rpm/300000) * (self.heat_exc_flow/100) * 0.1 * ((self.oil_temperature-self.external_temp)/100)
+        elif self.dc_bus:
+            self.oil_temperature -= (self.heat_exc_flow/100) * 0.3 * 0.1 * ((self.oil_temperature-self.external_temp)/100)
 
     def play_breaker_sound(self):
         if self.OS == "Windows":
@@ -336,6 +369,7 @@ class SimulationEngine:
         # disables systems running on AC bus A when it is unpowered
         self.pump1_state = 0
         self.fan1_state = 0
+        self.oil_pump_power = 0
     
     def ac_bus_b_unpowered(self):
         # disables systems running on AC bus B when it is unpowered
@@ -431,7 +465,6 @@ class SimulationEngine:
         self.water_inflow = max(min_inflow, min(max_inflow, self.water_inflow))
 
     def update_excitation(self):
-        # i have no idea why this is here but the code will explode if this is removed
         self.excitation += self.excitation_direction
 
     def update_flow_to_turbine(self):

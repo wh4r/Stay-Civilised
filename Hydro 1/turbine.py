@@ -1,7 +1,7 @@
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame
 from PyQt6.QtCore import Qt
 from buttons import CustomButton
-from gauges import UniversalGauge
+from gauges import UniversalGauge, LevelGauge
 from annunciators import Annunciator
 
 class TurbineWindow(QWidget):
@@ -10,20 +10,36 @@ class TurbineWindow(QWidget):
         self.engine = engine
         self.setWindowTitle("Turbine Systems")
         self.setStyleSheet("background-color: #1a1a1a; color: white;")
-        self.setFixedSize(1000, 700)
+        self.setFixedSize(1300, 600)
 
         main_layout = QVBoxLayout()
         self.setLayout(main_layout)
 
         main_layout.addWidget(QLabel("<h2>Turbine Panel</h2>", alignment=Qt.AlignmentFlag.AlignCenter))
 
+        # --- Annunciators ---
+        annunc_layout = QHBoxLayout()
+        self.elec_active = Annunciator("ELEC.", "orange", False)
+        self.shaft_active = Annunciator("SHAFT", "green", False)
+        self.em_active = Annunciator("EM", "red", False)
+        annunc_layout.addWidget(self.elec_active)
+        annunc_layout.addWidget(self.shaft_active)
+        annunc_layout.addWidget(self.em_active)
+        main_layout.addLayout(annunc_layout)
+
         # --- Gauges ---
         gauge_layout = QHBoxLayout()
+        self.turbine_level_gauge = LevelGauge("Turbine level")
+        self.drain_gauge = LevelGauge("Drain", [255,0,100])
+        self.bypass_gauge = LevelGauge("Bypasss", [255,0,100])
         self.rpm_gauge = UniversalGauge(title="RPM", unit="%", min_val=0, max_val=4000)
         self.excitation_guage = UniversalGauge(title="Excitation", unit="V", min_val=0, max_val=600)
-        self.oil_temperature = UniversalGauge(title="Oil temp", unit="°", min_val=20, max_val=100)
+        self.oil_temperature = UniversalGauge(title="Oil temp", unit="°", min_val=20, max_val=100, dp=2)
         self.pump = UniversalGauge(title="Pump", unit="%", min_val=0, max_val=100)
         self.exchanger = UniversalGauge(title="Exchanger valve", unit="%", min_val=0, max_val=100)
+        gauge_layout.addWidget(self.turbine_level_gauge)
+        gauge_layout.addWidget(self.drain_gauge)
+        gauge_layout.addWidget(self.bypass_gauge)
         gauge_layout.addWidget(self.rpm_gauge)
         gauge_layout.addWidget(self.excitation_guage)
         gauge_layout.addWidget(self.oil_temperature)
@@ -113,9 +129,9 @@ class TurbineWindow(QWidget):
         self.excitation_stop.clicked.connect(lambda: setattr(self.engine, 'excitation_direction', 0))
         self.excitation_decrease.clicked.connect(lambda: setattr(self.engine, 'excitation_direction', -1))
 
-        self.pump_elec.clicked.connect(lambda: setattr(self.engine, 'oil_pump_source', 0))
-        self.pump_shaft.clicked.connect(lambda: setattr(self.engine, 'oil_pump_source', 1))
-        self.pump_em.clicked.connect(lambda: setattr(self.engine, 'oil_pump_source', 2))
+        self.pump_elec.clicked.connect(lambda: self.pump_select(0))
+        self.pump_shaft.clicked.connect(lambda: self.pump_select(1))
+        self.pump_em.clicked.connect(lambda: self.pump_select(2))
 
         self.pump_increase.clicked.connect(lambda: setattr(self.engine, 'oil_pump_direction', 1))
         self.pump_stop.clicked.connect(lambda: setattr(self.engine, 'oil_pump_direction', 0))
@@ -133,6 +149,26 @@ class TurbineWindow(QWidget):
         self.stop_bypass.clicked.connect(lambda: setattr(self.engine, 'bypass_direction', 0))
         self.increase_bypass.clicked.connect(lambda: setattr(self.engine, 'bypass_direction', 1))
 
+        self.preheat_button.clicked.connect(lambda: setattr(self.engine, 'oil_preheater', not self.engine.oil_preheater))
+
+    def pump_select(self, value):
+            self.engine.oil_pump_source = value
+            if value == 0:
+                self.elec_active.blink = True
+                self.elec_active.set_state(True)
+                self.shaft_active.set_state(False)
+                self.em_active.set_state(False)
+            elif value == 1:
+                self.shaft_active.blink = True
+                self.elec_active.set_state(False)
+                self.shaft_active.set_state(True)
+                self.em_active.set_state(False)
+            else:
+                self.em_active.blink = True
+                self.elec_active.set_state(False)
+                self.shaft_active.set_state(False)
+                self.em_active.set_state(True)
+
 
     def create_separator(self):
         line = QFrame()
@@ -147,6 +183,11 @@ class TurbineWindow(QWidget):
         self.oil_temperature.set_value(self.engine.oil_temperature)
         self.pump.set_value(self.engine.oil_pump_power)
         self.exchanger.set_value(self.engine.heat_exc_flow)
+        self.preheat_annunc.set_state(self.engine.oil_preheater)
+
+        self.turbine_level_gauge.set_level(self.engine.turbine_water_level)
+        self.bypass_gauge.set_level(self.engine.bypass_opening)
+        self.drain_gauge.set_level(self.engine.drain_opening)
 
 
     

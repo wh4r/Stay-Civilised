@@ -1,4 +1,6 @@
 ## v0.4.0
+With the addition of sounds, images, multiple menus, and save files, pyinstaller can no longer create a functioning executable. Follow the instructions in the quickstart to download and run the program (requires git).
+- Replaced functions with changing variables directly
 - Fixed sync parameters (its still broken idk why)
 - Fixed Res. 2 press. labelled with 1
 - Added option to specify decimal places in gauges (defaults to 1)
@@ -13,4 +15,10 @@
     - Load - ctrl/cmd+O
     - Exit - ctrl/cmd+Q
     - About
+    - Turbine panel - 1
+    - Hydraulics panel - 2
+    - ELectrical panel - 3
+- 
+- Panel buttons removed
 - Placeholder help and about options
+- Main menu added (thanks gemini for UI design)

@@ -6,6 +6,7 @@
 
 ## Quickstart (Windows)
 **Clone repo**
+Requires git installed [download](https://git-scm.com/install/)
 ```cmd
 git clone https://github.com/wh4r/Stay-Civilised
 cd Stay-Civilised
@@ -21,10 +22,9 @@ py -m venv venv
 pip install -r requirements.txt
 ```
 
-**Run simulator.py**
+**Run main_menu.py**
 ```cmd
-cd "Hydro 1"
-py simulator.py
+py main_menu.py
 ```
 `py` may be `python` or `python3` on your computer.
 

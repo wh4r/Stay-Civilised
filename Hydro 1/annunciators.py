@@ -29,7 +29,6 @@ class Annunciator(QLabel):
             if active and not self.active:
                 self.needs_ack = True
         self.active = active
-
         self.update_style()
 
     # Resets annunciator
