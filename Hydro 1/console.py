@@ -33,16 +33,13 @@ class ConsoleWindow(QWidget):
     def handle_variable_change(self, command):
         command = command.split(" ")
         name = command[0].strip()
-        print(name)
         try:
             if name == "set_val":
                 setattr(self.engine, command[1].strip(), command[2])
                 self.text = f"{name} set to {command[1].strip()}"
-                print('a')
             elif name == "damage":
                 self.engine.damage = int(command[1].strip())
                 self.text = f"Damage set to {command[1].strip()}"
-                print('a')
             else:
                 self.text = "Error: unrecognised command"
             self.result.setText(self.text)

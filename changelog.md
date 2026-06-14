@@ -22,3 +22,4 @@ With the addition of sounds, images, multiple menus, and save files, pyinstaller
 - Panel buttons removed
 - Placeholder help and about options
 - Main menu added (thanks gemini for UI design)
+- harry added comment
