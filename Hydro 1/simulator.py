@@ -18,6 +18,7 @@ from save_dialogue import SaveWindow
 from load_dialogue import LoadWindow
 from about_project import AboutWindow
 from log import LogWindow
+from console import ConsoleWindow
 
 class HydroSimulator(QMainWindow):
     def __init__(self):
@@ -49,6 +50,9 @@ class HydroSimulator(QMainWindow):
 
         # Log window
         self.log_win = LogWindow(self.engine)
+
+        # Console window
+        self.console_win = ConsoleWindow(self.engine)
 
         # Set sound
         self.turbine_phase_hum = 0.0
@@ -111,9 +115,14 @@ class HydroSimulator(QMainWindow):
         electrical_window.setShortcut('3')
         electrical_window.triggered.connect(self.toggle_electrical)
         window_menu.addAction(electrical_window)
+
+        debug_menu = menu_bar.addMenu("&Debug")
         log_window = QAction('&Log', self)
         log_window.triggered.connect(self.toggle_log)
-        window_menu.addAction(log_window)
+        debug_menu.addAction(log_window)
+        console_window = QAction('&Console', self)
+        console_window.triggered.connect(self.toggle_console)
+        debug_menu.addAction(console_window)
 
         # -----------------------------------------------------------------------------------------------------------
         # Top Section (1): annunciators
@@ -510,6 +519,12 @@ class HydroSimulator(QMainWindow):
             self.log_win.hide()
         else:
             self.log_win.show()
+
+    def toggle_console(self):
+        if self.console_win.isVisible():
+            self.console_win.hide()
+        else:
+            self.console_win.show()
 
     def sound_callback(self, outdata, frames, time, status):
         # 1. ALWAYS initialize the chunk with zeros right at the start

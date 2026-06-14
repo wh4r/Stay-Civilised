@@ -17,7 +17,6 @@ class SaveWindow(QWidget):
 
         layout = QHBoxLayout()
 
-        # The callback can safely point to self.handle_variable_change now
         self.name_input = CustomInputField(
             placeholder_text="Filename...", 
             button_text="SAVE", 
@@ -27,7 +26,6 @@ class SaveWindow(QWidget):
         layout.addWidget(self.name_input)
         main_layout.addLayout(layout)
 
-    # SHIFTED OUTSIDE: This is now a proper method of the TurbineWindow class
     def handle_variable_change(self, text_string):
         self.engine.save_file(f"{text_string}.json")
         self.hide()
