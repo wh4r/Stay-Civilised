@@ -583,6 +583,7 @@ class HydroSimulator(QMainWindow):
         # 4. This will now safely push out either your audio or pure silence
         outdata[:] = chunk.reshape(-1, 1)
 
+# main stuff
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     window = HydroSimulator()
