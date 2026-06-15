@@ -6,6 +6,7 @@
 
 ## Quickstart (Windows)
 **Clone repo**
+
 Requires git installed [download](https://git-scm.com/install/)
 ```cmd
 git clone https://github.com/wh4r/Stay-Civilised
