@@ -90,9 +90,8 @@ class LoadWindow(QWidget):
         
         try:
             if not os.path.exists(self.save_path):
-                os.makedirs(self.save_path) # make the folder if it isn't there
+                os.makedirs(self.save_path)
             
-            # Find everything ending with .json
             files = [f for f in os.listdir(self.save_path) if f.endswith('.json')]
             files.sort() # alphabetical sort so its clean
             
@@ -109,19 +108,17 @@ class LoadWindow(QWidget):
         """Grabs the highlighted file and throws it over to the engine to load."""
         selected_items = self.file_list.selectedItems()
         if not selected_items:
-            return # nothing highlighted, do nothing
+            return
             
         filename = selected_items[0].text()
         
-        # Don't try loading the dummy empty/error texts
         if filename.startswith("---") or filename.startswith("Error"):
             return
             
-        # Call your engine's load function (assuming it's named load_file)
         if hasattr(self.engine, 'load_file'):
             self.engine.load_file(f"{self.save_path}{filename}")
             print(f"Loaded {self.save_path}{filename}")
-            self.hide() # hide the popup window after loading successfully
+            self.hide()
         else:
             print("code explode")
 

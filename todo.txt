@@ -1,0 +1,2 @@
+Malf. annunciator doesn't clear
+Log all actions in the log file

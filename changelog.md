@@ -18,8 +18,11 @@ With the addition of sounds, images, multiple menus, and save files, pyinstaller
     - Turbine panel - 1
     - Hydraulics panel - 2
     - ELectrical panel - 3
-- 
 - Panel buttons removed
 - Placeholder help and about options
 - Main menu added (thanks gemini for UI design)
+- Added debug panel with commands:
+    - set_val {variable name} {value}
+    - damage {value}
+- Added log panel which logs events and their times (needs to be added to all controls)
 - harry added comment

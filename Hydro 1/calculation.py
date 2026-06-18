@@ -297,7 +297,17 @@ class SimulationEngine:
         else:
             print("The code is broken (or you're on linux)")
         with open(path, "a") as f:
-            f.write(f"{self.sim_time} {log}")
+            f.write(f"{self.sim_time}: {log}\n")
+
+    def clear_log(self):
+        if self.OS == "Windows":
+            path = "Hydro 1\\log.txt"
+        elif self.OS == "Darwin":
+            path = "Hydro 1/log.txt"
+        else:
+            print("The code is broken (or you're on linux)")
+        with open(path, "w") as f:
+            f.write("")
 
     
     def turbine_systems(self):

@@ -320,6 +320,7 @@ class HydroSimulator(QMainWindow):
         # use this for optimisations
         self.electrical_win.update_ui()
         self.engine.update_battery()
+        self.setWindowTitle(f"Hydroelectric Plant Control System          [{round(self.engine.sim_time)//60}:{round(self.engine.sim_time)%60}]")
 
     def loop_1s(self):
         self.engine.update_res_temp()
@@ -337,12 +338,10 @@ class HydroSimulator(QMainWindow):
         if self.engine.sync:
             self.engine.sync = False
             self.engine.play_breaker_sound()
-        elif (self.engine.phase_diff < 3 and self.engine.phase_diff > 357) and not self.engine.sync and self.engine.current_rpm > 2980 and self.engine.current_rpm < 3020:
+        elif (self.engine.phase_diff < 3 or self.engine.phase_diff > 357) and not self.engine.sync and self.engine.current_rpm > 2980 and self.engine.current_rpm < 3020:
             self.engine.sync = True
             self.engine.breaker_hv1ge = True
             self.engine.background_rpm = self.engine.current_rpm
-            if 2 < self.engine.phase_diff < 358:
-                self.engine.add_damage(1.0)
             if self.engine.excitation < 490 or self.engine.excitation > 510:
                 self.engine.add_damage(abs(self.engine.excitation-500))
                 self.engine.sync = False

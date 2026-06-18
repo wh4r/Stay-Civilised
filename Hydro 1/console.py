@@ -44,7 +44,7 @@ class ConsoleWindow(QWidget):
                 self.text = "Error: unrecognised command"
             self.result.setText(self.text)
         except Exception as e:
-            self.result.setText(f"e")
+            self.result.setText(f"Error: {e}")
 
     def closeEvent(self, event):
         self.hide()
