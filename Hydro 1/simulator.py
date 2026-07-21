@@ -18,6 +18,7 @@ from save_dialogue import SaveWindow
 from load_dialogue import LoadWindow
 from about_project import AboutWindow
 from log import LogWindow
+from turbine_auto import TurbineAutoWindow
 from console import ConsoleWindow
 
 class HydroSimulator(QMainWindow):
@@ -53,6 +54,9 @@ class HydroSimulator(QMainWindow):
 
         # Console window
         self.console_win = ConsoleWindow(self.engine)
+
+        # Turbine auto window
+        self.turbine_auto_win = TurbineAutoWindow(self.engine)
 
         # Set sound
         self.turbine_phase_hum = 0.0
@@ -107,6 +111,10 @@ class HydroSimulator(QMainWindow):
         turbine_window.setShortcut('1')
         turbine_window.triggered.connect(self.toggle_turbine)
         window_menu.addAction(turbine_window)
+        turbine_auto_window = QAction('&Turbine Auto', self)
+        turbine_auto_window.setShortcut('4')
+        turbine_auto_window.triggered.connect(self.toggle_turbine_auto)
+        window_menu.addAction(turbine_auto_window)
         hydraulics_window = QAction('&Hydraulics', self)
         hydraulics_window.setShortcut('2')
         hydraulics_window.triggered.connect(self.toggle_hydraulics)
@@ -524,6 +532,12 @@ class HydroSimulator(QMainWindow):
             self.console_win.hide()
         else:
             self.console_win.show()
+
+    def toggle_turbine_auto(self):
+        if self.turbine_auto_win.isVisible():
+            self.turbine_auto_win.hide()
+        else:
+            self.turbine_auto_win.show()
 
     def sound_callback(self, outdata, frames, time, status):
         # 1. ALWAYS initialize the chunk with zeros right at the start

@@ -5,7 +5,8 @@ import subprocess
 import random
 from PyQt6.QtWidgets import (
     QApplication, QWidget, QFrame, QLabel, QPushButton, 
-    QVBoxLayout, QHBoxLayout, QGridLayout, QGraphicsDropShadowEffect
+    QVBoxLayout, QHBoxLayout, QGridLayout, QGraphicsDropShadowEffect,
+    QProgressBar
 )
 from PyQt6.QtCore import Qt, QTimer, QUrl
 from PyQt6.QtGui import QPainter, QPixmap, QColor, QFont, QIcon, QPen, QRadialGradient
@@ -61,6 +62,7 @@ class MainMenuWindow(QWidget):
         self.time_counter = 0.0
         self.blink_counter = 0
         self.blink_state = True
+        self.is_loading = False
         
         self.bg_timer = QTimer(self)
         self.bg_timer.timeout.connect(self.update_background)
@@ -227,7 +229,7 @@ class MainMenuWindow(QWidget):
             "COOLANT TEMP: 38.6 °C\n"
             "PRESSURE    : 101.3 kPa\n"
             "GRID FLUX   : 0.00 kW\n"
-            "DIAGNOSTIC  : SECURE"
+            "ENCRYPTION  : SECURE"
         )
         action_layout.addWidget(self.telemetry_label)
         
@@ -238,7 +240,7 @@ class MainMenuWindow(QWidget):
         action_layout.addWidget(v_sep)
         
         # Right: Chunky Physical Pushbutton
-        self.launch_btn = QPushButton("LAUNCH")
+        self.launch_btn = QPushButton("CONNECT")
         self.launch_btn.setStyleSheet("""
             QPushButton {
                 background-color: #a31d1d;
@@ -278,6 +280,34 @@ class MainMenuWindow(QWidget):
         
         card_layout.addLayout(action_layout)
         
+        # Progress Bar (initially hidden)
+        self.progress_bar = QProgressBar()
+        self.progress_bar.setObjectName("LaunchProgressBar")
+        self.progress_bar.setRange(0, 100)
+        self.progress_bar.setValue(0)
+        self.progress_bar.setTextVisible(True)
+        self.progress_bar.setFormat("BOOT SEQUENCE: %p%")
+        self.progress_bar.setStyleSheet("""
+            QProgressBar#LaunchProgressBar {
+                border: 2px solid #22aa22;
+                border-radius: 4px;
+                background-color: #020c03;
+                text-align: center;
+                color: #bd1300;
+                font-family: 'Courier New', 'Consolas', 'Terminal', monospace;
+                font-weight: bold;
+                font-size: 12px;
+                height: 25px;
+            }
+            QProgressBar#LaunchProgressBar::chunk {
+                background-color: #33ff33;
+                width: 12px;
+                margin: 1px;
+            }
+        """)
+        self.progress_bar.hide()
+        card_layout.addWidget(self.progress_bar)
+
         # Footer - Small Status Text
         footer_label = QLabel("VERSION v0.4.0 - STAY CIVILISED PROJECT")
         footer_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -311,17 +341,18 @@ class MainMenuWindow(QWidget):
             self.title_label.setText(f"> STAY CIVILISED {cursor}")
             
             # Slightly vary telemetry numbers
-            temp = 38.0 + random.uniform(0.5, 1.2)
-            pressure = 101.2 + random.uniform(-0.3, 0.4)
-            flux = random.choice([0.00, 0.00, 0.01, 0.00])
-            self.telemetry_label.setText(
-                "=== SYSTEM TELEMETRY ===\n"
-                "CORE STATUS : STANDBY\n"
-                f"COOLANT TEMP: {temp:.1f} °C\n"
-                f"PRESSURE    : {pressure:.1f} kPa\n"
-                f"GRID FLUX   : {flux:.2f} kW\n"
-                "DIAGNOSTIC  : SECURE"
-            )
+            if not self.is_loading:
+                temp = 38.0 + random.uniform(0.5, 1.2)
+                pressure = 101.2 + random.uniform(-0.3, 0.4)
+                flux = random.choice([0.00, 0.00, 0.01, 0.00])
+                self.telemetry_label.setText(
+                    "=== SYSTEM TELEMETRY ===\n"
+                    "CORE STATUS : STANDBY\n"
+                    f"COOLANT TEMP: {temp:.1f} °C\n"
+                    f"PRESSURE    : {pressure:.1f} kPa\n"
+                    f"GRID FLUX   : {flux:.2f} kW\n"
+                    "DIAGNOSTIC  : SECURE"
+                )
             
         self.update()
         
@@ -362,6 +393,78 @@ class MainMenuWindow(QWidget):
         painter.fillRect(self.rect(), vignette)
             
     def launch_simulator(self):
+        # Start mock boot loading sequence
+        self.is_loading = True
+        self.launch_btn.setEnabled(False)
+        self.launch_btn.setText("LOADING...")
+        self.progress_bar.setValue(0)
+        self.progress_bar.show()
+        
+        self.loading_progress = 0
+        self.loading_timer = QTimer(self)
+        self.loading_timer.timeout.connect(self.advance_loading)
+        self.loading_timer.start(100)
+
+    def advance_loading(self):
+        # Increment progress dynamically
+        self.loading_progress += random.randint(2, 5)
+        if self.loading_progress >= 100:
+            self.loading_progress = 100
+            self.progress_bar.setValue(100)
+            self.loading_timer.stop()
+            self.finalize_launch()
+            return
+            
+        self.progress_bar.setValue(self.loading_progress)
+        
+        # Update subtitle text
+        if self.loading_progress < 25:
+            self.subtitle_label.setText("[ SYS STATUS: INITIALISING SECURE CONNECTION... ]")
+        elif self.loading_progress < 50:
+            self.subtitle_label.setText("[ SYS STATUS: INITIALIZING SIMULATION... ]")
+        elif self.loading_progress < 75:
+            self.subtitle_label.setText("[ SYS STATUS: SYNCHRONIZING GRID DATA... ]")
+        else:
+            self.subtitle_label.setText("[ SYS STATUS: MEETING THE DEMAND... ]")
+            
+        # Update telemetry log with boot steps
+        log_lines = []
+        if self.loading_progress >= 15:
+            log_lines.append("CORE BOOT      : OK")
+        else:
+            log_lines.append("CORE BOOT      : STARTING")
+            
+        if self.loading_progress >= 40:
+            log_lines.append("PRESSURE VALVE : OPEN")
+        elif self.loading_progress >= 15:
+            log_lines.append("PRESSURE VALVE : CONNECTING")
+            
+        if self.loading_progress >= 65:
+            log_lines.append("GRID FLUX CAP  : CHARGED")
+        elif self.loading_progress >= 40:
+            log_lines.append("GRID FLUX CAP  : SYNCING")
+            
+        if self.loading_progress >= 88:
+            log_lines.append("SIM COUPLING   : ENGAGED")
+        elif self.loading_progress >= 65:
+            log_lines.append("SIM COUPLING   : NEGOTIATING")
+            
+        while len(log_lines) < 4:
+            log_lines.append("")
+            
+        flux_val = (self.loading_progress / 100.0) * 1250.0 + random.uniform(-10.0, 10.0)
+        if flux_val < 0.0:
+            flux_val = 0.0
+        self.telemetry_label.setText(
+            "=== BOOT TELEMETRY ===\n"
+            f"{log_lines[0]}\n"
+            f"{log_lines[1]}\n"
+            f"{log_lines[2]}\n"
+            f"{log_lines[3]}\n"
+            f"GRID FLUX   : {flux_val:.2f} kW"
+        )
+
+    def finalize_launch(self):
         # Pause background music
         if self.music_exists and hasattr(self, 'player'):
             self.player.pause()
@@ -379,11 +482,30 @@ class MainMenuWindow(QWidget):
             self.poll_timer.start(500)
         except Exception as e:
             print("Error launching simulator:", e)
-            # Recover main menu if launch failed
-            self.showMaximized()
-            if self.music_exists and hasattr(self, 'player'):
-                self.player.play()
-                
+            self.reset_menu_state()
+
+    def reset_menu_state(self):
+        self.is_loading = False
+        self.progress_bar.hide()
+        self.progress_bar.setValue(0)
+        self.launch_btn.setEnabled(True)
+        self.launch_btn.setText("LAUNCH")
+        self.subtitle_label.setText("[ SYS STATUS: ONLINE | CONNECTION: STANDBY ]")
+        
+        # Reset telemetry text to standby
+        self.telemetry_label.setText(
+            "=== SYSTEM TELEMETRY ===\n"
+            "CORE STATUS : STANDBY\n"
+            "COOLANT TEMP: 38.6 °C\n"
+            "PRESSURE    : 101.3 kPa\n"
+            "GRID FLUX   : 0.00 kW\n"
+            "DIAGNOSTIC  : SECURE"
+        )
+        
+        self.showMaximized()
+        if self.music_exists and hasattr(self, 'player'):
+            self.player.play()
+            
     def check_simulator_status(self):
         if self.sim_process and self.sim_process.poll() is not None:
             # Process has finished
@@ -391,10 +513,8 @@ class MainMenuWindow(QWidget):
             self.poll_timer = None
             self.sim_process = None
             
-            # Show main menu and resume music
-            self.showMaximized()
-            if self.music_exists and hasattr(self, 'player'):
-                self.player.play()
+            # Restore main menu and UI states
+            self.reset_menu_state()
                 
     def closeEvent(self, event):
         # Stop background music loop

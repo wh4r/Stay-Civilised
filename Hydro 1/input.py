@@ -62,10 +62,14 @@ class CustomInputField(QWidget):
         layout.addWidget(self.entry)
         layout.addWidget(self.btn)
 
+    def set_placeholder(self, val):
+        self.entry.setPlaceholderText(val)
+        self.entry.update()
+
     def submit_value(self):
         text_val = self.entry.text()
         if self.callback:
             self.callback(text_val)
         
-        # Optional: clear the field after submitting if you want
-        # self.entry.clear()
+    def clear(self):
+        self.entry.clear()

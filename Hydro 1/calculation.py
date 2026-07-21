@@ -4,6 +4,7 @@ from playsound3 import playsound
 import platform
 import json
 from datetime import datetime
+from simple_pid import PID
 
 class SimulationEngine:
     def __init__(self):
@@ -111,6 +112,13 @@ class SimulationEngine:
         # Constants
         self.SAMPLE_RATE = 44100
         self.OS = platform.system()
+        if self.OS == "Windows":
+            self.path = "Hydro 1\\log.txt"
+        elif self.OS == "Darwin":
+            self.path = "Hydro 1/log.txt"
+        else:
+            print("The code is broken (or you're on linux)")
+        self.pid = PID(1, 0.1, 0.05, setpoint=0)
 
     def load_file(self, filepath=None):
         try:
@@ -262,16 +270,11 @@ class SimulationEngine:
             'gen_island': self.gen_island,
             'edg_started': self.edg_started
         }
-        if self.OS == "Windows":
-            path = "Hydro 1\\saves\\"
-        elif self.OS == "Darwin":
-            path = "Hydro 1/saves/"
-        else:
-            print("The code is broken (or you're on linux)")
+
         if not filename:
-            filename = f"{path}{datetime.now().strftime("%Y%m%d_%H%M%S")}"
+            filename = f"{self.path}{datetime.now().strftime("%Y%m%d_%H%M%S")}"
         else:
-            filename = f"{path}{filename}"
+            filename = f"{self.path}{filename}"
         try:
             with open(filename, 'w') as f:
                 json.dump(save_variables, f, indent=4)
@@ -279,34 +282,19 @@ class SimulationEngine:
         except Exception as e:
             print(f"file blew up: {e}")
 
+    def auto_turbine(self):
+        pass
+
     def read_log(self):
-        if self.OS == "Windows":
-            path = "Hydro 1\\log.txt"
-        elif self.OS == "Darwin":
-            path = "Hydro 1/log.txt"
-        else:
-            print("The code is broken (or you're on linux)")
-        with open(path, "r") as f:
+        with open(self.path, "r") as f:
             return f.readlines()
 
     def log(self, log = 'error'):
-        if self.OS == "Windows":
-            path = "Hydro 1\\log.txt"
-        elif self.OS == "Darwin":
-            path = "Hydro 1/log.txt"
-        else:
-            print("The code is broken (or you're on linux)")
-        with open(path, "a") as f:
+        with open(self.path, "a") as f:
             f.write(f"{self.sim_time}: {log}\n")
 
     def clear_log(self):
-        if self.OS == "Windows":
-            path = "Hydro 1\\log.txt"
-        elif self.OS == "Darwin":
-            path = "Hydro 1/log.txt"
-        else:
-            print("The code is broken (or you're on linux)")
-        with open(path, "w") as f:
+        with open(self.path, "w") as f:
             f.write("")
 
     

@@ -35,8 +35,11 @@ class ConsoleWindow(QWidget):
         name = command[0].strip()
         try:
             if name == "set_val":
-                setattr(self.engine, command[1].strip(), command[2])
-                self.text = f"{name} set to {command[1].strip()}"
+                try:
+                    setattr(self.engine, command[1].strip(), command[2])
+                    self.text = f"{name} set to {command[1].strip()}"
+                except Exception as e:
+                    self.text = f"Error: {e}"
             elif name == "damage":
                 self.engine.damage = int(command[1].strip())
                 self.text = f"Damage set to {command[1].strip()}"
