@@ -11,53 +11,63 @@ class TurbineAutoWindow(QWidget):
         self.engine = engine
         self.setWindowTitle("Automatic Turbine Control")
         self.setStyleSheet("background-color: #1a1a1a; color: white;")
-        self.setFixedSize(1300, 600)
 
         main_layout = QVBoxLayout()
         self.setLayout(main_layout)
 
-        main_layout.addWidget(QLabel("<h2>Turbine Panel</h2>", alignment=Qt.AlignmentFlag.AlignCenter))
+        main_layout.addWidget(QLabel("<h2>Automatic Turbine Control</h2>", alignment=Qt.AlignmentFlag.AlignCenter))
+
+        # --- Annunciators ---
+        annunc_layout = QHBoxLayout()
+        self.active = Annunciator("AUTO ACTIVE", "green", False)
+        self.high_accel = Annunciator("HIGH ACCEL.", persistent=False)
+        annunc_layout.addWidget(self.active)
+        annunc_layout.addWidget(self.high_accel)
+        main_layout.addLayout(annunc_layout)
 
         # --- Gauges ---
         gauge_layout = QHBoxLayout()
-        self.turbine_level_gauge = LevelGauge("Turbine level")
-        self.drain_gauge = LevelGauge("Drain", [255,0,100])
-        self.bypass_gauge = LevelGauge("Bypasss", [255,0,100])
         self.rpm_gauge = UniversalGauge(title="RPM", unit="%", min_val=0, max_val=4000)
-        self.excitation_guage = UniversalGauge(title="Excitation", unit="V", min_val=0, max_val=600)
         self.oil_temperature = UniversalGauge(title="Oil temp", unit="°", min_val=20, max_val=100, dp=2)
-        self.pump = UniversalGauge(title="Pump", unit="%", min_val=0, max_val=100)
-        self.exchanger = UniversalGauge(title="Exchanger valve", unit="%", min_val=0, max_val=100)
-        gauge_layout.addWidget(self.turbine_level_gauge)
-        gauge_layout.addWidget(self.drain_gauge)
-        gauge_layout.addWidget(self.bypass_gauge)
         gauge_layout.addWidget(self.rpm_gauge)
-        gauge_layout.addWidget(self.excitation_guage)
         gauge_layout.addWidget(self.oil_temperature)
-        gauge_layout.addWidget(self.pump)
-        gauge_layout.addWidget(self.exchanger)
         main_layout.addLayout(gauge_layout)
         main_layout.addWidget(self.create_separator())
 
         pid_layout = QVBoxLayout()
+        self.setpoint = CustomInputField(
+            placeholder_text="setpoint", 
+            button_text="SET", 
+            color="#0066cc", 
+            callback=lambda val: self.setpoint_change(val)
+        )
         self.Kp = CustomInputField(
-                placeholder_text="p", 
-                button_text="ENTER", 
-                color="#0066cc", 
-                callback=lambda val: self.Kp_change(val)
-            )
+            placeholder_text="p", 
+            button_text="SET", 
+            color="#0066cc", 
+            callback=lambda val: self.Kp_change(val)
+        )
         self.Ki = CustomInputField(
-                placeholder_text="i", 
-                button_text="ENTER", 
-                color="#0066cc", 
-                callback=lambda val: self.handle_variable_change(val)
-            )
+            placeholder_text="i", 
+            button_text="SET", 
+            color="#0066cc", 
+            callback=lambda val: self.Ki_change(val)
+        )
         self.Kd = CustomInputField(
-                placeholder_text="d", 
-                button_text="ENTER", 
-                color="#0066cc", 
-                callback=lambda val: self.handle_variable_change(val)
-            )
+            placeholder_text="d", 
+            button_text="SET", 
+            color="#0066cc", 
+            callback=lambda val: self.Kd_change(val)
+        )
+        
+        # Set initial placeholders from engine's PID values
+        self.setpoint.set_placeholder(str(self.engine.pid.setpoint))
+        self.Kp.set_placeholder(str(self.engine.pid.Kp))
+        self.Ki.set_placeholder(str(self.engine.pid.Ki))
+        self.Kd.set_placeholder(str(self.engine.pid.Kd))
+
+        pid_layout.addWidget(QLabel("<b>Setpoint (RPM)</b>"))
+        pid_layout.addWidget(self.setpoint)
         pid_layout.addWidget(QLabel("<b>p</b>"))
         pid_layout.addWidget(self.Kp)
         pid_layout.addWidget(QLabel("<b>i</b>"))
@@ -71,24 +81,43 @@ class TurbineAutoWindow(QWidget):
         self.stop = CustomButton("STOP", "red")
         toggle_layout.addWidget(self.start)
         toggle_layout.addWidget(self.stop)
-        main_layout.addLayout()
+        main_layout.addLayout(toggle_layout)
+
+        self.start.clicked.connect(lambda: setattr(self.engine, 'auto_state', True))
+        self.stop.clicked.connect(lambda: setattr(self.engine, 'auto_state', False))
 
     
+    def setpoint_change(self, val):
+        try:
+            self.engine.pid.setpoint = float(val)
+            self.setpoint.clear()
+            self.setpoint.set_placeholder(val)
+        except Exception:
+            pass
+
     def Kp_change(self, val):
-        self.engine.pid.Kp = val
-        self.Kp.clear()
-        self.Kp.set_placeholder(val)
+        try:
+            self.engine.pid.Kp = float(val)
+            self.Kp.clear()
+            self.Kp.set_placeholder(val)
+        except Exception:
+            pass
 
     def Ki_change(self, val):
-        self.engine.pid.Ki = val
-        self.Ki.clear()
-        self.Ki.set_placeholder(val)
+        try:
+            self.engine.pid.Ki = float(val)
+            self.Ki.clear()
+            self.Ki.set_placeholder(val)
+        except Exception:
+            pass
 
     def Kd_change(self, val):
-        self.engine.pid.Kd = val
-        self.Ki.clear()
-        self.Ki.set_placeholder(val)
-
+        try:
+            self.engine.pid.Kd = float(val)
+            self.Kd.clear()
+            self.Kd.set_placeholder(val)
+        except Exception:
+            pass
 
     def create_separator(self):
         line = QFrame()
@@ -99,15 +128,8 @@ class TurbineAutoWindow(QWidget):
     
     def update_ui(self):
         self.rpm_gauge.set_value(self.engine.current_rpm)
-        self.excitation_guage.set_value(self.engine.excitation)
         self.oil_temperature.set_value(self.engine.oil_temperature)
-        self.pump.set_value(self.engine.oil_pump_power)
-        self.exchanger.set_value(self.engine.heat_exc_flow)
-        self.preheat_annunc.set_state(self.engine.oil_preheater)
-
-        self.turbine_level_gauge.set_level(self.engine.turbine_water_level)
-        self.bypass_gauge.set_level(self.engine.bypass_opening)
-        self.drain_gauge.set_level(self.engine.drain_opening)
+        self.active.set_state(self.engine.auto_state)
 
 
     

@@ -54,6 +54,8 @@ class SimulationEngine:
         self.oil_preheater = False
         self.heat_exc_direction = 0
         self.heat_exc_flow = 0
+        # auto
+        self.auto_state = False
 
 
         # HYDRAULICS
@@ -118,7 +120,7 @@ class SimulationEngine:
             self.path = "Hydro 1/log.txt"
         else:
             print("The code is broken (or you're on linux)")
-        self.pid = PID(1, 0.1, 0.05, setpoint=0)
+        self.pid = PID(0.1, 0.01, 0, setpoint=0, output_limits=(0, 100))
 
     def load_file(self, filepath=None):
         try:
@@ -477,6 +479,17 @@ class SimulationEngine:
             self.gate_opening = max(0.0, min(100.0, self.gate_opening + (self.gate_direction * 0.01 * (self.hyd_coef if self.gate_direction > 0 else 1))))
             if self.turbine_inflow_variation <= self.current_rpm/200:
                 self.turbine_inflow_variation += 0.1
+            self.auto_state = False
+
+    def auto_turbine_control(self):
+        self.pid.set_auto_mode(self.auto_state, last_output=self.gate_opening)
+        last_pos = self.gate_opening
+        if self.auto_state:
+            gate_target = self.pid(self.current_rpm, dt=0.1)
+            gate_error = gate_target - last_pos
+            clipped_change = max(-0.02, min(0.02, gate_error))
+            self.gate_opening = last_pos + clipped_change
+
 
     def update_drain_bypass_pos(self):
         # updates turbine level when bypass or drain are opened

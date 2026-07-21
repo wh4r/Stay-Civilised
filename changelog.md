@@ -30,3 +30,4 @@ With the addition of sounds, images, multiple menus, and save files, pyinstaller
 
 ## To do
 - Automatic turbine control
+- Decrease gate delay when water fills the path (water hammer)

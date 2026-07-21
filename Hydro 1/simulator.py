@@ -394,6 +394,7 @@ class HydroSimulator(QMainWindow):
         self.engine.update_turbine_water_level()
         self.engine.update_pump_reservoir()
         self.engine.update_systems(0.1)
+        self.engine.auto_turbine_control()
         self.alarm_interlock.set_state(self.engine.check_interlock())
 
         # electricity
@@ -415,6 +416,7 @@ class HydroSimulator(QMainWindow):
         # RPM update
         high_accel = self.engine.update_rpm()
         self.high_acceleration.set_state(high_accel)
+        self.turbine_auto_win.high_accel.set_state(high_accel)
         self.rpm_gauge.set_value(self.engine.current_rpm)
         
         # Water Level
@@ -477,6 +479,7 @@ class HydroSimulator(QMainWindow):
         self.low_hyd_pres.set_state(self.engine.hyd_coef <= 0.5)
         self.electrical_win.update_ui()
         self.turbine_win.update_ui()
+        self.turbine_auto_win.update_ui()
         
         # Turbine damage check
         if self.engine.turbine_water_level < 100:
