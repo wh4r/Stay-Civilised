@@ -27,8 +27,8 @@ class TurbineAutoWindow(QWidget):
 
         # --- Gauges ---
         gauge_layout = QHBoxLayout()
-        self.rpm_gauge = UniversalGauge(title="RPM", unit="%", min_val=0, max_val=4000)
-        self.oil_temperature = UniversalGauge(title="Oil temp", unit="°", min_val=20, max_val=100, dp=2)
+        self.rpm_gauge = UniversalGauge(title="Turbine RPM", unit="RPM", min_val=0, max_val=4000)
+        self.oil_temperature = UniversalGauge(title="Oil temp.", unit="°", min_val=20, max_val=100, dp=2)
         gauge_layout.addWidget(self.rpm_gauge)
         gauge_layout.addWidget(self.oil_temperature)
         main_layout.addLayout(gauge_layout)
@@ -40,6 +40,12 @@ class TurbineAutoWindow(QWidget):
             button_text="SET", 
             color="#0066cc", 
             callback=lambda val: self.setpoint_change(val)
+        )
+        self.speed = CustomInputField(
+            placeholder_text="0.2", 
+            button_text="SET", 
+            color="#0066cc", 
+            callback=lambda val: self.speed_change(val)
         )
         self.Kp = CustomInputField(
             placeholder_text="p", 
@@ -68,6 +74,8 @@ class TurbineAutoWindow(QWidget):
 
         pid_layout.addWidget(QLabel("<b>Setpoint (RPM)</b>"))
         pid_layout.addWidget(self.setpoint)
+        pid_layout.addWidget(QLabel("<b>Speed (gate%/s)</b>"))
+        pid_layout.addWidget(self.speed)
         pid_layout.addWidget(QLabel("<b>p</b>"))
         pid_layout.addWidget(self.Kp)
         pid_layout.addWidget(QLabel("<b>i</b>"))
@@ -92,6 +100,14 @@ class TurbineAutoWindow(QWidget):
             self.engine.pid.setpoint = float(val)
             self.setpoint.clear()
             self.setpoint.set_placeholder(val)
+        except Exception:
+            pass
+
+    def speed_change(self, val):
+        try:
+            self.engine.auto_speed = float(val/10)
+            self.speed.clear()
+            self.setpoint.set_placeholder(val/10)
         except Exception:
             pass
 

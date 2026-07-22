@@ -56,6 +56,7 @@ class SimulationEngine:
         self.heat_exc_flow = 0
         # auto
         self.auto_state = False
+        self.auto_speed = 0.02
 
 
         # HYDRAULICS
@@ -120,7 +121,7 @@ class SimulationEngine:
             self.path = "Hydro 1/log.txt"
         else:
             print("The code is broken (or you're on linux)")
-        self.pid = PID(0.1, 0.01, 0, setpoint=0, output_limits=(0, 100))
+        self.pid = PID(0.005, 0.001, 0, setpoint=0, output_limits=(0, 100))
 
     def load_file(self, filepath=None):
         try:
@@ -284,16 +285,13 @@ class SimulationEngine:
         except Exception as e:
             print(f"file blew up: {e}")
 
-    def auto_turbine(self):
-        pass
-
     def read_log(self):
         with open(self.path, "r") as f:
             return f.readlines()
 
     def log(self, log = 'error'):
         with open(self.path, "a") as f:
-            f.write(f"{self.sim_time}: {log}\n")
+            f.write(f"{round(self.sim_time}, 5): {log}\n")
 
     def clear_log(self):
         with open(self.path, "w") as f:
@@ -302,7 +300,7 @@ class SimulationEngine:
     
     def turbine_systems(self):
         self.oil_pump_power = max(0.0, min(100.0, self.oil_pump_power + self.oil_pump_direction)) if self.ac_bus_a else 0
-        self.heat_exc_flow = max(0.0, min(100.0, self.heat_exc_flow + self.heat_exc_direction)) * self.hyd_coef
+        self.heat_exc_flow = max(0.0, min(100.0, self.heat_exc_flow + self.heat_exc_direction * self.hyd_coef))
         self.oil_temperature += (max(self.current_rpm-500, 0) / 2500) * (1/self.oil_temperature)
         if self.oil_preheater and self.ac_bus_a:
             self.oil_temperature += 0.1 * (1/self.oil_temperature)
@@ -484,12 +482,11 @@ class SimulationEngine:
     def auto_turbine_control(self):
         self.pid.set_auto_mode(self.auto_state, last_output=self.gate_opening)
         last_pos = self.gate_opening
-        if self.auto_state:
+        if self.auto_state and self.hyd_coef >= 0.5 and not self.is_emergency:
             gate_target = self.pid(self.current_rpm, dt=0.1)
             gate_error = gate_target - last_pos
-            clipped_change = max(-0.02, min(0.02, gate_error))
+            clipped_change = max(-self.auto_speed, min(self.auto_speed, gate_error))
             self.gate_opening = last_pos + clipped_change
-
 
     def update_drain_bypass_pos(self):
         # updates turbine level when bypass or drain are opened

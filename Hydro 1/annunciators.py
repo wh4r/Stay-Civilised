@@ -15,7 +15,7 @@ class Annunciator(QLabel):
         self.alert_color = alert_color
         self.active = False
         self.needs_ack = False
-        self.blink = False
+        self.blink = True
         self.persistent = persistent
         self.sound_freq = sound_freq
         self.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -28,6 +28,8 @@ class Annunciator(QLabel):
         if self.persistent:
             if active and not self.active:
                 self.needs_ack = True
+        else:
+            self.blink = True if active else False
         self.active = active
         self.update_style()
 

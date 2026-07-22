@@ -37,8 +37,8 @@ Programmed and tested on python 3.14.3 avaialble [here](https://www.python.org/d
 | :--- | :--- | :---: | :---: |
 | **v0.2.0-demo** | Rewrite and panel demo | ✅ Live | High |
 | **v0.3.0-demo** | Panel functionality | ✅ Live | High |
-| **v0.4.0-demo** | Optimisations | 🏗️ Dev | Medium |
-| **v0.5.0-demo** | Automatic turbine control | ⏳ Planned | Medium |
-| **v1.0.0-demo** | Spillway, demand, maintenance | ⏳ Planned | High |
+| **v0.4.0-demo** | Automatic turbine control | ✅ Live | Medium |
+| **v1.0.0-alpha** | Spillway, demand, phone | 🏗️ In dev | High |
+| **v1.1.0-alpha** | Maintenance | ⏳ Planned | High |
 
 Versions are MAJOR.MINOR.PATCH-STAGE

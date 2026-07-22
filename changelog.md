@@ -18,6 +18,7 @@ With the addition of sounds, images, multiple menus, and save files, pyinstaller
     - Turbine panel - 1
     - Hydraulics panel - 2
     - ELectrical panel - 3
+    - TUrbine auto panel - 4
 - Buttons to open panels have been removed to reduce clutter on the main page
 - Placeholder help and about options
 - Main menu added (thanks gemini for UI design I cant do CSS)
@@ -27,7 +28,9 @@ With the addition of sounds, images, multiple menus, and save files, pyinstaller
 - Added log panel which logs events and their times (currently only logs some events)
 - slight optimisation for log functions
 - Demand generator added (still wip)
+- Fixed annunciator class self.blink not activating when self.persistent is False
+- Added automatic turbine control
 
-## To do
-- Automatic turbine control
+## To do9
+- Update save system to support new variables
 - Decrease gate delay when water fills the path (water hammer)

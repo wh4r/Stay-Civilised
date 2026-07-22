@@ -49,6 +49,18 @@ Res. 2 press. was labelled Res. 1. press for awy too long when I copied the code
 
 The save and load functions didn't work on macos since it uses `/` for paths and not `\` for windows. This was an easy fix since the code only needs to check the OS used and uses paths with the corrosponsing character.
 
+The self.blink line was added since the annunciators would not light up if persistent was set to False. The default value for blink is False so the flashing can work.
+```python
+    def set_state(self, active):
+        ...
+        if self.persistent:
+            if active and not self.active:
+                self.needs_ack = True
+        else:
+            self.blink = True if active else False
+        ...
+```
+
 ## Integration testing
 When new panels are added:
 - No way to open the panel
