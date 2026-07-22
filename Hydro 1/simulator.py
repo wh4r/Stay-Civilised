@@ -202,7 +202,7 @@ class HydroSimulator(QMainWindow):
         gauges_layout = QHBoxLayout()
         self.level_gauge = LevelGauge("Forebay Level")
         
-        self.rpm_gauge = UniversalGauge("Turbine RPM", 0, 4000, "RPM")
+        self.rpm_gauge = UniversalGauge("Turbine RPM", 0, 700, "RPM")
         self.freq_gauge = UniversalGauge("Frequency", 45, 65, "Hz")
         self.gate_guage = UniversalGauge("Gate", 0, 100, "%", dp=3)
         self.synchro = UniversalGauge("Synchroscope", 0, 360, "")
@@ -347,7 +347,7 @@ class HydroSimulator(QMainWindow):
         if self.engine.sync:
             self.engine.sync = False
             self.engine.play_breaker_sound()
-        elif (self.engine.phase_diff < 3 or self.engine.phase_diff > 357) and not self.engine.sync and self.engine.current_rpm > 2980 and self.engine.current_rpm < 3020:
+        elif (self.engine.phase_diff < 3 or self.engine.phase_diff > 357) and not self.engine.sync and self.engine.current_rpm > 496.67 and self.engine.current_rpm < 503.33:
             self.engine.sync = True
             self.engine.breaker_hv1ge = True
             self.engine.background_rpm = self.engine.current_rpm
@@ -452,9 +452,9 @@ class HydroSimulator(QMainWindow):
         
         # Alarms
         self.alarm_low_water.set_state(self.engine.water_level < 50)
-        self.alarm_overload.set_state(self.engine.current_rpm > 3300)
-        self.high_rpm.set_state(self.engine.current_rpm > 3100)
-        if self.engine.water_level < 50 or self.engine.current_rpm > 3100:
+        self.alarm_overload.set_state(self.engine.current_rpm > 550)
+        self.high_rpm.set_state(self.engine.current_rpm > 516.67)
+        if self.engine.water_level < 50 or self.engine.current_rpm > 516.67:
             self.engine.add_damage()
 
         # Update active sound frequencies for the audio callback

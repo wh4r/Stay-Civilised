@@ -301,13 +301,13 @@ class SimulationEngine:
     def turbine_systems(self):
         self.oil_pump_power = max(0.0, min(100.0, self.oil_pump_power + self.oil_pump_direction)) if self.ac_bus_a else 0
         self.heat_exc_flow = max(0.0, min(100.0, self.heat_exc_flow + self.heat_exc_direction * self.hyd_coef))
-        self.oil_temperature += (max(self.current_rpm-500, 0) / 2500) * (1/self.oil_temperature)
+        self.oil_temperature += (max(self.current_rpm-83.33, 0) / 416.67) * (1/self.oil_temperature)
         if self.oil_preheater and self.ac_bus_a:
             self.oil_temperature += 0.1 * (1/self.oil_temperature)
         if self.oil_pump_source == 0 and self.ac_bus_a:
             self.oil_temperature -= (self.oil_pump_power/100) * (self.heat_exc_flow/100) * 0.1 * ((self.oil_temperature-self.external_temp)/100)
         elif self.oil_pump_source == 1:
-            self.oil_temperature -= (self.current_rpm/300000) * (self.heat_exc_flow/100) * 0.1 * ((self.oil_temperature-self.external_temp)/100)
+            self.oil_temperature -= (self.current_rpm/50000) * (self.heat_exc_flow/100) * 0.1 * ((self.oil_temperature-self.external_temp)/100)
         elif self.dc_bus:
             self.oil_temperature -= (self.heat_exc_flow/100) * 0.3 * 0.1 * ((self.oil_temperature-self.external_temp)/100)
 
@@ -475,7 +475,7 @@ class SimulationEngine:
         # opens/closes the gate
         if not self.is_emergency and self.gate_direction != 0:
             self.gate_opening = max(0.0, min(100.0, self.gate_opening + (self.gate_direction * 0.01 * (self.hyd_coef if self.gate_direction > 0 else 1))))
-            if self.turbine_inflow_variation <= self.current_rpm/200:
+            if self.turbine_inflow_variation <= self.current_rpm/33.33:
                 self.turbine_inflow_variation += 0.1
             self.auto_state = False
 
@@ -528,22 +528,22 @@ class SimulationEngine:
         # calculates the turbine RPM
         # there are LOTS of calculations DO NOT TOUCH THIS FUNCTION
 
-        self.friction_coefficient = (self.current_rpm*0.1)*(self.damage/10)
+        self.friction_coefficient = (self.current_rpm*0.6)*(self.damage/10)
         # This is calculated using the damage, oil temperature, rpm
 
         high_accel = False
         if not self.sync:
-            target_rpm = (self.flow_to_turbine[0] * 12.0 * 6 - self.friction_coefficient) if not self.is_emergency else 0.0
-            if target_rpm - self.current_rpm > 100:
+            target_rpm = (self.flow_to_turbine[0] * 12.0 - self.friction_coefficient) if not self.is_emergency else 0.0
+            if target_rpm - self.current_rpm > 16.67:
                 high_accel = True
                 self.add_damage()
             self.current_rpm += (target_rpm - self.current_rpm) * 0.01 + (math.sin(random.randint(10,20)*self.sim_time)*self.turbine_inflow_variation*0.03)
-            self.gen_island = True if self.current_rpm > 2950 and self.current_rpm < 3050 else False
+            self.gen_island = True if self.current_rpm > 491.67 and self.current_rpm < 508.33 else False
         else:
             self.gen_island = True
-            target_rpm = 3000.0
+            target_rpm = 500.0
             self.current_rpm += (target_rpm - self.current_rpm) * 0.1
-            target_rpm = (self.flow_to_turbine[0] * 12.0) if not self.is_emergency else 0.0
+            target_rpm = (self.flow_to_turbine[0] * 2.0) if not self.is_emergency else 0.0
             self.background_rpm += (target_rpm - self.background_rpm) * 0.005
         return high_accel
 
@@ -559,7 +559,7 @@ class SimulationEngine:
         # calculates phase difference when turbine is not synced
         grid_freq = 50.0
         if not self.sync:
-            freq = (self.current_rpm / 60.0)
+            freq = (self.current_rpm / 10.0)
             self.grid_phase = (self.grid_phase + grid_freq * 360 * dt) % 360
             self.gen_phase = (self.gen_phase + freq * 360 * dt) % 360
             current_phase_diff = (self.gen_phase - self.grid_phase) % 360
@@ -574,7 +574,7 @@ class SimulationEngine:
         # This must be updated to follow the equation P=pghQ where Q is flow rate in m^3
 
         if self.sync:
-            self.power = ((self.background_rpm-3000)/700)*100
+            self.power = ((self.background_rpm-500.0)/116.67)*100
         else:
             self.power = 0.0
         return self.power

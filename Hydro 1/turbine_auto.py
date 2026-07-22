@@ -27,7 +27,7 @@ class TurbineAutoWindow(QWidget):
 
         # --- Gauges ---
         gauge_layout = QHBoxLayout()
-        self.rpm_gauge = UniversalGauge(title="Turbine RPM", unit="RPM", min_val=0, max_val=4000)
+        self.rpm_gauge = UniversalGauge(title="Turbine RPM", unit="RPM", min_val=0, max_val=700)
         self.oil_temperature = UniversalGauge(title="Oil temp.", unit="°", min_val=20, max_val=100, dp=2)
         gauge_layout.addWidget(self.rpm_gauge)
         gauge_layout.addWidget(self.oil_temperature)

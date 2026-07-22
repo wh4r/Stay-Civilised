@@ -32,7 +32,7 @@ class TurbineWindow(QWidget):
         self.turbine_level_gauge = LevelGauge("Turbine level")
         self.drain_gauge = LevelGauge("Drain", [255,0,100])
         self.bypass_gauge = LevelGauge("Bypasss", [255,0,100])
-        self.rpm_gauge = UniversalGauge(title="RPM", unit="%", min_val=0, max_val=4000)
+        self.rpm_gauge = UniversalGauge(title="RPM", unit="RPM", min_val=0, max_val=700)
         self.excitation_guage = UniversalGauge(title="Excitation", unit="V", min_val=0, max_val=600)
         self.oil_temperature = UniversalGauge(title="Oil temp", unit="°", min_val=20, max_val=100, dp=2)
         self.pump = UniversalGauge(title="Pump", unit="%", min_val=0, max_val=100)
