@@ -559,7 +559,7 @@ class SimulationEngine:
         # calculates phase difference when turbine is not synced
         grid_freq = 50.0
         if not self.sync:
-            freq = (self.current_rpm / 60.0) + (0.1 * math.sin(self.sim_time))
+            freq = (self.current_rpm / 60.0)
             self.grid_phase = (self.grid_phase + grid_freq * 360 * dt) % 360
             self.gen_phase = (self.gen_phase + freq * 360 * dt) % 360
             current_phase_diff = (self.gen_phase - self.grid_phase) % 360
