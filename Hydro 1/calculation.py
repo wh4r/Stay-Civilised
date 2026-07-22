@@ -291,7 +291,7 @@ class SimulationEngine:
 
     def log(self, log = 'error'):
         with open(self.path, "a") as f:
-            f.write(f"{round(self.sim_time}, 5): {log}\n")
+            f.write(f"{round(self.sim_time, 5)}: {log}\n")
 
     def clear_log(self):
         with open(self.path, "w") as f:
