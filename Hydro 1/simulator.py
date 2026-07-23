@@ -203,11 +203,14 @@ class HydroSimulator(QMainWindow):
         self.level_gauge = LevelGauge("Forebay Level")
         
         self.rpm_gauge = UniversalGauge("Turbine RPM", 0, 700, "RPM")
-        self.freq_gauge = UniversalGauge("Frequency", 45, 65, "Hz")
+        self.rpm_gauge.set_danger(530, 550)
+        self.freq_gauge = UniversalGauge("Frequency", 45, 55, "Hz")
+        self.freq_gauge.set_danger(50.1, 51, 49.9, 49)
         self.gate_guage = UniversalGauge("Gate", 0, 100, "%", dp=3)
         self.synchro = UniversalGauge("Synchroscope", 0, 360, "")
         self.synchro.configure(0, 360, "", "Synchroscope", start_angle=0, span_angle=360, needle_color="yellow")
         self.power_gauge = UniversalGauge("Power", -10, 100, "MW")
+        self.power_gauge.set_danger(reverse_yellow=0, reverse_red=-10)
         
         gauges_layout.addWidget(self.level_gauge)
         gauges_layout.addWidget(self.rpm_gauge)
@@ -453,8 +456,8 @@ class HydroSimulator(QMainWindow):
         # Alarms
         self.alarm_low_water.set_state(self.engine.water_level < 50)
         self.alarm_overload.set_state(self.engine.current_rpm > 550)
-        self.high_rpm.set_state(self.engine.current_rpm > 516.67)
-        if self.engine.water_level < 50 or self.engine.current_rpm > 516.67:
+        self.high_rpm.set_state(self.engine.current_rpm > 530)
+        if self.engine.water_level < 50 or self.engine.current_rpm > 530:
             self.engine.add_damage()
 
         # Update active sound frequencies for the audio callback

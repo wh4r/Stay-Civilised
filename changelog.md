@@ -31,6 +31,10 @@ With the addition of sounds, images, multiple menus, and save files, pyinstaller
 - Fixed annunciator class self.blink not activating when self.persistent is False
 - Added automatic turbine control
 
-## To do9
+## v0.4.1
+- Added orange and red bars to the gauges to more clearly indicate the operating values
+- Changed RPM (500RPM) to match that of a more realistic 12 pole generator
+
+## To do
 - Update save system to support new variables
 - Decrease gate delay when water fills the path (water hammer)

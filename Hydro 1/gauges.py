@@ -12,6 +12,12 @@ class UniversalGauge(QWidget):
         self.start_angle = 240  # start position
         self.span_angle = 240   # arc length
         self.dp=dp
+        self.yellow_start = None
+        self.red_start = None
+        self.warning_zone = False
+        self.reverse_yellow_start = None
+        self.reverse_red_start = None
+        self.reverse_warning_zone = False
 
     # Changes the values of the gauge
     def configure(self, min_val, max_val, unit, title, start_angle=240, span_angle=240, needle_color="red"):
@@ -29,6 +35,17 @@ class UniversalGauge(QWidget):
         self.value = max(self.min_val, min(self.max_val, val))
         self.update()
 
+    def set_danger(self, yellow=None, red=None, reverse_yellow=None, reverse_red=None):
+        if yellow is not None and red is not None:
+            self.yellow_start = yellow
+            self.red_start = red
+            self.warning_zone = True
+
+        if reverse_yellow is not None and reverse_red is not None:
+            self.reverse_yellow_start = reverse_yellow
+            self.reverse_red_start = reverse_red
+            self.reverse_warning_zone = True
+
     # Draws the gauge
     def paintEvent(self, event):
         painter = QPainter(self)
@@ -43,6 +60,11 @@ class UniversalGauge(QWidget):
         painter.setPen(QPen(Qt.GlobalColor.white, 2))
         painter.setBrush(QColor(30, 30, 30))
         painter.drawEllipse(-90, -90, 180, 180)
+        
+        if self.warning_zone:
+            self.draw_warning_zones(painter, self.yellow_start, self.red_start)
+        if self.reverse_warning_zone:
+            self.draw_reverse_warning_zones(painter, self.reverse_yellow_start, self.reverse_red_start)
 
         # scale
         painter.setPen(QPen(Qt.GlobalColor.white, 1))
@@ -75,6 +97,102 @@ class UniversalGauge(QWidget):
             painter.drawText(-50, 40, 100, 20, Qt.AlignmentFlag.AlignCenter, f"{round(self.value, self.dp)} {self.unit}")
             painter.setFont(QFont("Arial", 8))
             painter.drawText(-50, 60, 100, 20, Qt.AlignmentFlag.AlignCenter, self.title)
+        
+
+    def draw_warning_zones(self, painter, yellow_start=None, red_start=None):
+        """
+        Draws yellow and red warning zones on the gauge.
+
+        Parameters
+        ----------
+        yellow_start : float
+            Value where the yellow zone begins.
+        red_start : float
+            Value where the red zone begins.
+        """
+        if yellow_start is None or red_start is None:
+            return
+
+        pen = QPen()
+        pen.setWidth(8)
+        pen.setCapStyle(Qt.PenCapStyle.FlatCap)
+
+        radius = 85
+        rect = (-radius, -radius, radius * 2, radius * 2)
+
+        # Yellow zone
+        yellow_angle = self.start_angle + (
+            (yellow_start - self.min_val) / (self.max_val - self.min_val)
+        ) * self.span_angle
+
+        red_angle = self.start_angle + (
+            (red_start - self.min_val) / (self.max_val - self.min_val)
+        ) * self.span_angle
+
+        pen.setColor(QColor("orange"))
+        painter.setPen(pen)
+        painter.setBrush(Qt.BrushStyle.NoBrush)
+        painter.drawArc(
+            *rect,
+            int((-yellow_angle + 90) * 16),
+            int(-(red_angle - yellow_angle) * 16),
+        )
+
+        # Red zone
+        pen.setColor(QColor("red"))
+        painter.setPen(pen)
+        painter.drawArc(
+            *rect,
+            int((-red_angle + 90) * 16),
+            int(-(self.start_angle + self.span_angle - red_angle) * 16),
+        )
+    
+    def draw_reverse_warning_zones(self, painter, yellow_end=None, red_end=None):
+        """
+        Draw warning zones for LOW values.
+
+        red_end    : end of the red zone
+        yellow_end : end of the yellow zone
+        """
+        if yellow_end is None or red_end is None:
+            return
+
+        pen = QPen()
+        pen.setWidth(8)
+        pen.setCapStyle(Qt.PenCapStyle.FlatCap)
+
+        radius = 85
+        rect = (-radius, -radius, radius * 2, radius * 2)
+
+        red_angle = self.start_angle + (
+            (red_end - self.min_val)
+            / (self.max_val - self.min_val)
+        ) * self.span_angle
+
+        yellow_angle = self.start_angle + (
+            (yellow_end - self.min_val)
+            / (self.max_val - self.min_val)
+        ) * self.span_angle
+
+        painter.setBrush(Qt.BrushStyle.NoBrush)
+
+        # Red zone (minimum -> red_end)
+        pen.setColor(QColor("red"))
+        painter.setPen(pen)
+        painter.drawArc(
+            *rect,
+            int((-self.start_angle + 90) * 16),
+            int(-(red_angle - self.start_angle) * 16),
+        )
+
+        # Yellow zone (red_end -> yellow_end)
+        pen.setColor(QColor("orange"))
+        painter.setPen(pen)
+        painter.drawArc(
+            *rect,
+            int((-red_angle + 90) * 16),
+            int(-(yellow_angle - red_angle) * 16),
+        )
 
 class LevelGauge(QWidget):
     # Special vertical gauge for the water level display
