@@ -34,7 +34,10 @@ With the addition of sounds, images, multiple menus, and save files, pyinstaller
 ## v0.4.1
 - Added orange and red bars to the gauges to more clearly indicate the operating values
 - Changed RPM (500RPM) to match that of a more realistic 12 pole generator
+- Added spillway control
+- Made water outflow relative to water level
 
 ## To do
 - Update save system to support new variables
 - Decrease gate delay when water fills the path (water hammer)
+- Annunciators on other panels don't work when save file is laoded
