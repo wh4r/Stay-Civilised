@@ -20,6 +20,7 @@ from about_project import AboutWindow
 from log import LogWindow
 from turbine_auto import TurbineAutoWindow
 from console import ConsoleWindow
+from spillway import SpillwayWindow
 
 class HydroSimulator(QMainWindow):
     def __init__(self):
@@ -57,6 +58,9 @@ class HydroSimulator(QMainWindow):
 
         # Turbine auto window
         self.turbine_auto_win = TurbineAutoWindow(self.engine)
+
+        # Spillway window
+        self.spillway_win = SpillwayWindow(self.engine)
 
         # Set sound
         self.turbine_phase_hum = 0.0
@@ -123,6 +127,10 @@ class HydroSimulator(QMainWindow):
         turbine_auto_window.setShortcut('4')
         turbine_auto_window.triggered.connect(self.toggle_turbine_auto)
         window_menu.addAction(turbine_auto_window)
+        spillway_window = QAction('&Spillway', self)
+        spillway_window.setShortcut('5')
+        spillway_window.triggered.connect(self.toggle_spillway)
+        window_menu.addAction(spillway_window)
         window_menu.setFixedWidth(150)
 
         debug_menu = menu_bar.addMenu("&Debug")
@@ -484,6 +492,7 @@ class HydroSimulator(QMainWindow):
         self.electrical_win.update_ui()
         self.turbine_win.update_ui()
         self.turbine_auto_win.update_ui()
+        self.spillway_win.update_ui()
         
         # Turbine damage check
         if self.engine.turbine_water_level < 100:
@@ -503,6 +512,9 @@ class HydroSimulator(QMainWindow):
         self.oil_temp.set_state(self.engine.oil_temperature >= 85)
         if self.engine.oil_temperature >= 90:
             self.handle_emergency_stop()
+
+        # Spillway update
+        self.engine.update_spillway()
     
     def toggle_about(self):
         if self.about_win.isVisible():
@@ -545,6 +557,12 @@ class HydroSimulator(QMainWindow):
             self.turbine_auto_win.hide()
         else:
             self.turbine_auto_win.show()
+
+    def toggle_spillway(self):
+        if self.spillway_win.isVisible():
+            self.spillway_win.hide()
+        else:
+            self.spillway_win.show()
 
     def sound_callback(self, outdata, frames, time, status):
         # 1. ALWAYS initialize the chunk with zeros right at the start

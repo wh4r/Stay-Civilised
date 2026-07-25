@@ -105,9 +105,9 @@ class TurbineAutoWindow(QWidget):
 
     def speed_change(self, val):
         try:
-            self.engine.auto_speed = float(val/10)
+            self.engine.auto_speed = (float(val)/10)
             self.speed.clear()
-            self.setpoint.set_placeholder(val/10)
+            self.speed.set_placeholder(val)
         except Exception:
             pass
 

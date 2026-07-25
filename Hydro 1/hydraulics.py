@@ -24,9 +24,13 @@ class HydraulicsWindow(QWidget):
         # --- Gauges ---
         gauge_layout = QHBoxLayout()
         self.res_gauge_1 = UniversalGauge(title="Res. 1 pressure", unit="%") # Replace with actual values using multiplier
+        self.res_gauge_1.set_danger(reverse_yellow=50, reverse_red=20)
         self.res_gauge_2 = UniversalGauge(title="Res. 2 pressure", unit="%")
+        self.res_gauge_2.set_danger(reverse_yellow=50, reverse_red=20)
         self.res_temp_1 = UniversalGauge(title="Res. 1 temp", unit="°", min_val=20, max_val=50)
+        self.res_temp_1.set_danger(40, 42, 37, 35)
         self.res_temp_2 = UniversalGauge(title="Res. 2 temp", unit="°", min_val=20, max_val=50)
+        self.res_temp_2.set_danger(40, 42, 37, 35)
         gauge_layout.addWidget(self.res_gauge_1)
         gauge_layout.addWidget(self.res_gauge_2)
         gauge_layout.addWidget(self.res_temp_1)

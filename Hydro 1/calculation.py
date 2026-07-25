@@ -109,6 +109,12 @@ class SimulationEngine:
         self.battery_charge = 5.0
         self.gen_island = False
 
+        # SPILLWAY
+        self.spill_open_1 = 0
+        self.spill_open_2 = 0
+        self.spill_1 = 0
+        self.spill_2 = 0
+
         # EDG
         self.edg_started = False
         
@@ -122,6 +128,10 @@ class SimulationEngine:
         else:
             print("The code is broken (or you're on linux)")
         self.pid = PID(0.005, 0.001, 0, setpoint=0, output_limits=(0, 100))
+
+    def update_spillway(self):
+        self.spill_1 = min(100, max(0, self.spill_1 + self.spill_open_1))*self.hyd_coef
+        self.spill_2 = min(100, max(0, self.spill_2 + self.spill_open_2))*self.hyd_coef
 
     def load_file(self, filepath=None):
         try:
@@ -549,7 +559,7 @@ class SimulationEngine:
 
     def update_water_level(self):
         # Updates the reservoir water level very slowly
-        water_outflow = self.gate_opening
+        water_outflow = (self.gate_opening + self.spill_1 + self.spill_2) * self.water_level
         net_flow = self.water_inflow - water_outflow
         self.water_level += net_flow * 0.00001
         self.water_level = max(0.0, min(100.0, self.water_level))
