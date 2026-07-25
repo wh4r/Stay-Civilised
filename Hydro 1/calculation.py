@@ -559,7 +559,7 @@ class SimulationEngine:
 
     def update_water_level(self):
         # Updates the reservoir water level very slowly
-        water_outflow = (self.gate_opening + self.spill_1 + self.spill_2) * self.water_level
+        water_outflow = (self.gate_opening + self.spill_1 + self.spill_2) * self.water_level/100
         net_flow = self.water_inflow - water_outflow
         self.water_level += net_flow * 0.00001
         self.water_level = max(0.0, min(100.0, self.water_level))
