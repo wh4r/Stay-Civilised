@@ -217,7 +217,7 @@ class HydroSimulator(QMainWindow):
         self.gate_guage = UniversalGauge("Gate", 0, 100, "%", dp=3)
         self.synchro = UniversalGauge("Synchroscope", 0, 360, "")
         self.synchro.configure(0, 360, "", "Synchroscope", start_angle=0, span_angle=360, needle_color="yellow")
-        self.power_gauge = UniversalGauge("Power", -10, 100, "MW")
+        self.power_gauge = UniversalGauge("Power", -10, 400, "MW")
         self.power_gauge.set_danger(reverse_yellow=0, reverse_red=-10)
         
         gauges_layout.addWidget(self.level_gauge)
@@ -358,7 +358,7 @@ class HydroSimulator(QMainWindow):
         if self.engine.sync:
             self.engine.sync = False
             self.engine.play_breaker_sound()
-        elif (self.engine.phase_diff < 3 or self.engine.phase_diff > 357) and not self.engine.sync and self.engine.current_rpm > 496.67 and self.engine.current_rpm < 503.33:
+        elif ((self.engine.phase_diff < 10 or self.engine.phase_diff > 350)) and not self.engine.sync and self.engine.current_rpm > 496.67 and self.engine.current_rpm < 503.33:
             self.engine.sync = True
             self.engine.breaker_hv1ge = True
             self.engine.background_rpm = self.engine.current_rpm

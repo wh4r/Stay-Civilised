@@ -122,9 +122,9 @@ class SimulationEngine:
         self.SAMPLE_RATE = 44100
         self.OS = platform.system()
         if self.OS == "Windows":
-            self.path = "Hydro 1\\log.txt"
+            self.path = "Hydro 1\\"
         elif self.OS == "Darwin":
-            self.path = "Hydro 1/log.txt"
+            self.path = "Hydro 1/"
         else:
             print("The code is broken (or you're on linux)")
         self.pid = PID(0.005, 0.001, 0, setpoint=0, output_limits=(0, 100))
@@ -285,7 +285,10 @@ class SimulationEngine:
         }
 
         if not filename:
-            filename = f"{self.path}{datetime.now().strftime("%Y%m%d_%H%M%S")}"
+            if self.OS == "Windows":
+                filename = f"{self.path}saves\\{datetime.now().strftime("%Y%m%d_%H%M%S")}"
+            else:
+                filename = f"{self.path}saves/{datetime.now().strftime("%Y%m%d_%H%M%S")}"
         else:
             filename = f"{self.path}{filename}"
         try:
@@ -296,11 +299,11 @@ class SimulationEngine:
             print(f"file blew up: {e}")
 
     def read_log(self):
-        with open(self.path, "r") as f:
+        with open(f"{self.path}log.txt", "r") as f:
             return f.readlines()
 
     def log(self, log = 'error'):
-        with open(self.path, "a") as f:
+        with open(f"{self.path}log.txt", "a") as f:
             f.write(f"{round(self.sim_time, 5)}: {log}\n")
 
     def clear_log(self):
@@ -553,7 +556,7 @@ class SimulationEngine:
             self.gen_island = True
             target_rpm = 500.0
             self.current_rpm += (target_rpm - self.current_rpm) * 0.1
-            target_rpm = (self.flow_to_turbine[0] * 2.0) if not self.is_emergency else 0.0
+            target_rpm = (self.flow_to_turbine[0] * 12.0) if not self.is_emergency else 0.0
             self.background_rpm += (target_rpm - self.background_rpm) * 0.005
         return high_accel
 
