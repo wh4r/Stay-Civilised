@@ -179,7 +179,7 @@ class AboutWindow(QWidget):
         # Footer
         # =====================================================
 
-        footer = QLabel("Project Polaris")
+        footer = QLabel("Poaitron")
         footer.setAlignment(Qt.AlignmentFlag.AlignCenter)
         footer.setStyleSheet("""
             color: #888;
