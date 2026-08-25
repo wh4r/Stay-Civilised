@@ -12,6 +12,8 @@ from PyQt6.QtCore import Qt, QTimer, QUrl
 from PyQt6.QtGui import QPainter, QPixmap, QColor, QFont, QIcon, QPen, QRadialGradient
 from PyQt6.QtMultimedia import QMediaPlayer, QAudioOutput
 
+from cloud_save import CloudSaveWindow
+
 class CRTOverlay(QWidget):
     def __init__(self, parent):
         super().__init__(parent)
@@ -276,7 +278,50 @@ class MainMenuWindow(QWidget):
             }
         """)
         self.launch_btn.clicked.connect(self.launch_simulator)
-        action_layout.addWidget(self.launch_btn)
+        
+        right_col = QVBoxLayout()
+        right_col.setSpacing(10)
+        right_col.addWidget(self.launch_btn)
+        
+        self.cloud_btn = QPushButton("CLOUD SAVE")
+        self.cloud_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #1a4a1a;
+                color: #33ff33;
+                border: 4px solid;
+                border-top-color: #55aa55;
+                border-left-color: #55aa55;
+                border-right-color: #0a2a0a;
+                border-bottom-color: #0a2a0a;
+                border-radius: 4px;
+                font-family: 'Courier New', 'Consolas', 'Terminal', monospace;
+                font-size: 14px;
+                font-weight: bold;
+                padding: 8px 30px;
+                min-width: 160px;
+                max-height: 45px;
+            }
+            QPushButton:hover {
+                background-color: #226622;
+                border-top-color: #77cc77;
+                border-left-color: #77cc77;
+                border-right-color: #0c3a0c;
+                border-bottom-color: #0c3a0c;
+            }
+            QPushButton:pressed {
+                background-color: #0a2a0a;
+                border: 4px solid;
+                border-top-color: #051505;
+                border-left-color: #051505;
+                border-right-color: #55aa55;
+                border-bottom-color: #55aa55;
+                padding: 10px 28px 6px 32px;
+            }
+        """)
+        self.cloud_btn.clicked.connect(self.open_cloud_save)
+        right_col.addWidget(self.cloud_btn)
+        
+        action_layout.addLayout(right_col)
         
         card_layout.addLayout(action_layout)
         
@@ -392,6 +437,13 @@ class MainMenuWindow(QWidget):
         vignette.setColorAt(1.0, QColor(0, 0, 0, 230))
         painter.fillRect(self.rect(), vignette)
             
+    def open_cloud_save(self):
+        if not hasattr(self, 'cloud_win'):
+            self.cloud_win = CloudSaveWindow()
+        self.cloud_win.show()
+        self.cloud_win.raise_()
+        self.cloud_win.activateWindow()
+
     def launch_simulator(self):
         # Start mock boot loading sequence
         self.is_loading = True
