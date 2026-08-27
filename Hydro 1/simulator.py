@@ -21,6 +21,8 @@ from log import LogWindow
 from turbine_auto import TurbineAutoWindow
 from console import ConsoleWindow
 from spillway import SpillwayWindow
+from phonebook import PhoneWindow
+from grid import GridWindow
 
 class HydroSimulator(QMainWindow):
     def __init__(self):
@@ -61,6 +63,11 @@ class HydroSimulator(QMainWindow):
 
         # Spillway window
         self.spillway_win = SpillwayWindow(self.engine)
+
+        # Phone window
+        self.phone_win = PhoneWindow(self.engine)
+
+        self.grid_win = GridWindow(self.engine)
 
         # Set sound
         self.turbine_phase_hum = 0.0
@@ -110,6 +117,13 @@ class HydroSimulator(QMainWindow):
         about_action.triggered.connect(self.toggle_about)
         help_menu.addAction(about_action)
 
+        grid_menu = menu_bar.addMenu("&Grid")
+        grid_window = QAction('&Grid', self)
+        grid_window.setShortcut('0')
+        grid_window.triggered.connect(self.toggle_grid)
+        grid_menu.addAction(grid_window)
+        grid_menu.setFixedWidth(150)
+
         window_menu = menu_bar.addMenu('&Window')
         turbine_window = QAction('&Turbine', self)
         turbine_window.setShortcut('1')
@@ -131,6 +145,10 @@ class HydroSimulator(QMainWindow):
         spillway_window.setShortcut('5')
         spillway_window.triggered.connect(self.toggle_spillway)
         window_menu.addAction(spillway_window)
+        phone_window = QAction('&Phone', self)
+        phone_window.setShortcut('6')
+        phone_window.triggered.connect(self.toggle_phone)
+        window_menu.addAction(phone_window)
         window_menu.setFixedWidth(150)
 
         debug_menu = menu_bar.addMenu("&Debug")
@@ -409,6 +427,9 @@ class HydroSimulator(QMainWindow):
         self.engine.auto_turbine_control()
         self.alarm_interlock.set_state(self.engine.check_interlock())
 
+        self.engine.update_demand()
+        self.grid_win.update_ui()
+
         # electricity
         if self.engine.gen_island:
             self.engine.ac_bus_b = self.engine.breaker_hv1gb
@@ -563,6 +584,18 @@ class HydroSimulator(QMainWindow):
             self.spillway_win.hide()
         else:
             self.spillway_win.show()
+
+    def toggle_phone(self):
+        if self.phone_win.isVisible():
+            self.phone_win.hide()
+        else:
+            self.phone_win.show()
+
+    def toggle_grid(self):
+            if self.grid_win.isVisible():
+                self.grid_win.hide()
+            else:
+                self.grid_win.show()
 
     def sound_callback(self, outdata, frames, time, status):
         # 1. ALWAYS initialize the chunk with zeros right at the start

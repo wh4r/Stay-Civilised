@@ -15,6 +15,8 @@ class SimulationEngine:
 
         # TIMING
         self.sim_time = 0.0
+        self.timestamp = [1,0,0,0]
+        self.prev_day=1
 
         # WATER
         self.water_inflow = 50.0
@@ -115,6 +117,9 @@ class SimulationEngine:
         self.spill_1 = 0
         self.spill_2 = 0
 
+        # DEMAND
+        self.current_demand = 0
+
         # EDG
         self.edg_started = False
         
@@ -128,6 +133,9 @@ class SimulationEngine:
         else:
             print("The code is broken (or you're on linux)")
         self.pid = PID(0.005, 0.001, 0, setpoint=0, output_limits=(0, 100))
+
+        with open("demand\\day_001.txt" if self.OS=="Windows" else "demand/day_001.txt" if self.OS=="Darwin" else "", "r") as f:
+            self.today_demand=f.readlines()
 
     def update_spillway(self):
         self.spill_1 = min(100, max(0, self.spill_1 + self.spill_open_1))*self.hyd_coef
@@ -344,6 +352,20 @@ class SimulationEngine:
                 self.dc_bus = False
         elif self.breaker_dc1dca or self.breaker_dc1dcb:
             self.battery_charge += 0.05
+
+    def update_time(self):
+        day = self.sim_time//86400
+        hour = (self.sim_time-(day*86400))//3600
+        minute = (self.sim_time-(day*86400)-(hour*2600))//60
+        second = (self.sim_time-(day*86400)-(hour*2600)-(minute*60))
+        self.timestamp = [day+1, hour, minute, second]
+
+    def update_demand(self):
+        if self.timestamp[0]!=self.prev_day:
+            with open(f"demand\\day_{"0"*(3-len(str(self.timestamp[0])))}{self.timestamp[0]}.txt" if self.OS == "Windows" else f"demand/day_{"0"*(3-len(str(self.timestamp[0])))}{self.timestamp[0]}.txt" if self.OS == "Darwin" else "", "r") as f:
+                self.today_demand = f.readlines()
+        self.current_demand = self.today_demand[math.floor(self.timestamp[1]*60+self.timestamp[2])]
+        self.prev_day = self.timestamp[1]
 
     def update_res_temp(self):
         # increases temperature if preheater is on
