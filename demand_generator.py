@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import os
+import platform
 
 # -----------------------------
 # variables
@@ -49,7 +50,7 @@ for day in range(days):
 
     day_data = demand[start:end]
 
-    filename = f"demand\\day_{day+1:03d}.txt"
+    filename = f"demand\\day_{day+1:03d}.txt" if platform.system()=="Windows" else f"demand/day_{day+1:03d}.txt" if platform.system()=="Darwin" else ""
 
     np.savetxt(
         filename,

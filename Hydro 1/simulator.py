@@ -67,6 +67,7 @@ class HydroSimulator(QMainWindow):
         # Phone window
         self.phone_win = PhoneWindow(self.engine)
 
+        # Grid window
         self.grid_win = GridWindow(self.engine)
 
         # Set sound
