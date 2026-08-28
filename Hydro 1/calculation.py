@@ -354,6 +354,7 @@ class SimulationEngine:
             self.battery_charge += 0.05
 
     def update_time(self):
+        # updates the timestammp
         day = self.sim_time//86400
         hour = (self.sim_time-(day*86400))//3600
         minute = (self.sim_time-(day*86400)-(hour*2600))//60
@@ -361,11 +362,16 @@ class SimulationEngine:
         self.timestamp = [day+1, hour, minute, second]
 
     def update_demand(self):
+        # supposed to update the demand every minute but it appears to be broken
         if self.timestamp[0]!=self.prev_day:
-            with open(f"demand\\day_{"0"*(3-len(str(self.timestamp[0])))}{self.timestamp[0]}.txt" if self.OS == "Windows" else f"demand/day_{"0"*(3-len(str(self.timestamp[0])))}{self.timestamp[0]}.txt" if self.OS == "Darwin" else "", "r") as f:
+            with open(f"demand{"\\" if self.OS == "Windows" else "/" if self.OS == "Darwin" else ""}day_{"0"*(3-len(str(self.timestamp[0])))}{self.timestamp[0]}.txt", "r") as f:
                 self.today_demand = f.readlines()
-        self.current_demand = self.today_demand[math.floor(self.timestamp[1]*60+self.timestamp[2])]
-        self.prev_day = self.timestamp[1]
+        current_demand = float(self.today_demand[math.floor(self.timestamp[1]*60+self.timestamp[2])])
+        next_demand = float(self.today_demand[math.floor(self.timestamp[1]*60+self.timestamp[2]+1)])
+        self.current_demand = round(current_demand + (next_demand-current_demand)*(self.timestamp[3]/60), 2)
+        if len(str(self.current_demand)) != 6:
+            self.current_demand+=0.01
+        self.prev_day = self.timestamp[0]
 
     def update_res_temp(self):
         # increases temperature if preheater is on

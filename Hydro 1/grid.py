@@ -40,7 +40,7 @@ class GridWindow(QWidget):
 
         current_demand = QVBoxLayout()
         current_demand.addWidget(QLabel("<h4>Current Demand</h4>"))
-        self.current_demand = SevenSegmentDisplay(4)
+        self.current_demand = SevenSegmentDisplay(6)
         self.current_demand.set_number(8888)
         current_demand.addWidget(self.current_demand)
         generation_layout.addLayout(current_demand)

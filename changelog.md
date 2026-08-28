@@ -37,6 +37,7 @@ With the addition of sounds, images, multiple menus, and save files, pyinstaller
 - Added spillway control
 - Made water outflow relative to water level
 - Added phone (functions missing)
+- Added demand calculations
 
 ## To do
 - Update save system to support new variables
@@ -46,3 +47,4 @@ With the addition of sounds, images, multiple menus, and save files, pyinstaller
 - Add power/rpm mode for auto control
 - Add grid frequency simulation
 - Add graph system
+- Change res. temp to be exponential

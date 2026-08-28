@@ -429,6 +429,7 @@ class HydroSimulator(QMainWindow):
         self.alarm_interlock.set_state(self.engine.check_interlock())
 
         self.engine.update_demand()
+        self.engine.update_time()
         self.grid_win.update_ui()
 
         # electricity

@@ -103,6 +103,6 @@ class SevenSegmentDisplay(QWidget):
 
             if self.dps[i]:
                 painter.setBrush(ON_COLOR)
-                painter.drawEllipse(QPointF(4, 9.5), 1.0, 1.0)
+                painter.drawEllipse(QPointF(17, 9.5), 1.0, 1.0)
 
             painter.restore()

@@ -6,9 +6,9 @@
             "1": {
                 "function": false,
                 "text": "Thank you for calling the maintenance hotline!",
-                "option1": "Press 1 for turbine maintenance",
-                "option2": "Press 2 for generator maintenance",
-                "option3": "Press 3 if you just blew up the entire turbine so now we have to pay for a brand new, really expensive, turbine."
+                "option1": "Turbine maintenance",
+                "option2": "Generator maintenance",
+                "option3": "Turbine exploded"
             },
             "11": {}
         }
@@ -20,15 +20,15 @@
             "1": {
                 "function": false,
                 "text": "What have you done... something has gone very wrong hasn't it...",
-                "option1": "1 - Request blackout",
-                "option2": "2 - Request rolling blackout"
+                "option1": "Request blackout",
+                "option2": "Request rolling blackout"
             },
             "11": {
                 "function": false,
                 "text": "Oh god, you cant meet the demand again. The customers sure won't be happy about this. You will pay for the millions of phone calls im gonna get!!!!!!!\nFine... tell me how much power you need and I'll organise it.",
-                "option1": "1 - 150MW",
-                "option2": "2 - 250MW",
-                "option3": "3 - 500MW"
+                "option1": "150MW",
+                "option2": "250MW",
+                "option3": "500MW"
             },
             "111": {
                 "function": true,
@@ -48,9 +48,9 @@
             "12": {
                 "function": false,
                 "text": "DO YOU UNDERSTAND HOW MUCH EFFORT THIS TAKES. Fine, how much do you need.\nYou gotta buy me a beer tonight.",
-                "option1": "1 - 40MW",
-                "option2": "2 - 70MW",
-                "option3": "3 - 100MW"
+                "option1": "40MW",
+                "option2": "70MW",
+                "option3": "100MW"
             },
             "121": {
                 "function": true,
