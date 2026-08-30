@@ -36,8 +36,20 @@ With the addition of sounds, images, multiple menus, and save files, pyinstaller
 - Changed RPM (500RPM) to match that of a more realistic 12 pole generator
 - Added spillway control
 - Made water outflow relative to water level
+- Added phone (functions missing)
+- Added demand calculations
 
 ## To do
 - Update save system to support new variables
 - Decrease gate delay when water fills the path (water hammer)
-- Annunciators on other panels don't work when save file is laoded
+- Add another window with grid conditions
+- Add power/rpm mode for auto control
+- Add grid frequency simulation
+- Add graph system
+- Change res. temp to be exponential
+
+## Known bugs
+- Something keeps decreasing the spillway
+- Annunciators on other panels don't work when save file is loaded
+- Cooling on shaft mode still uses old 3000rpm so it doesnt actually cool down
+- Save files are placed in the wrong location

@@ -3,6 +3,8 @@ import random
 from playsound3 import playsound
 import platform
 import json
+import sys
+import os
 from datetime import datetime
 from simple_pid import PID
 
@@ -15,6 +17,8 @@ class SimulationEngine:
 
         # TIMING
         self.sim_time = 0.0
+        self.timestamp = [1,0,0,0]
+        self.prev_day=1
 
         # WATER
         self.water_inflow = 50.0
@@ -115,6 +119,18 @@ class SimulationEngine:
         self.spill_1 = 0
         self.spill_2 = 0
 
+        # DEMAND
+        self.current_demand = 0
+        self.seed = 86557
+        self.today_demand = []
+
+        # Rolling history (demand + forebay level), sampled once per simulated
+        # minute so one point per minute over the "past hour" is kept.
+        self.HISTORY_LEN = 60
+        self.demand_history = []
+        self.water_history = []
+        self._last_history_minute = -1
+
         # EDG
         self.edg_started = False
         
@@ -128,6 +144,9 @@ class SimulationEngine:
         else:
             print("The code is broken (or you're on linux)")
         self.pid = PID(0.005, 0.001, 0, setpoint=0, output_limits=(0, 100))
+
+        with open("demand\\day_001.txt" if self.OS=="Windows" else "demand/day_001.txt" if self.OS=="Darwin" else "", "r") as f:
+            self.today_demand=f.readlines()
 
     def update_spillway(self):
         self.spill_1 = min(100, max(0, self.spill_1 + self.spill_open_1))*self.hyd_coef
@@ -207,6 +226,35 @@ class SimulationEngine:
                 self.battery_charge = load_data['battery_charge']
                 self.gen_island = load_data['gen_island']
                 self.edg_started = load_data['edg_started']
+
+                # TURBINE (auto)
+                self.auto_state = load_data.get('auto_state', self.auto_state)
+                self.auto_speed = load_data.get('auto_speed', self.auto_speed)
+                self.oil_pump_source = load_data.get('oil_pump_source', self.oil_pump_source)
+
+                # HYDRAULICS (supplementary)
+                self.pump1_state = load_data.get('pump1_state', self.pump1_state)
+                self.fan1_state = load_data.get('fan1_state', self.fan1_state)
+                self.pump_selector = load_data.get('pump_selector', self.pump_selector)
+
+                # SPILLWAY
+                self.spill_open_1 = load_data.get('spill_open_1', self.spill_open_1)
+                self.spill_open_2 = load_data.get('spill_open_2', self.spill_open_2)
+                self.spill_1 = load_data.get('spill_1', self.spill_1)
+                self.spill_2 = load_data.get('spill_2', self.spill_2)
+
+                # DEMAND
+                self.current_demand = load_data.get('current_demand', self.current_demand)
+                self.seed = load_data.get('seed', self.seed)
+                self.timestamp = load_data.get('timestamp', self.timestamp)
+                self.prev_day = load_data.get('prev_day', self.prev_day)
+                if 'today_demand' in load_data:
+                    self.today_demand = load_data['today_demand']
+
+                # HISTORY
+                self.demand_history = load_data.get('demand_history', self.demand_history)
+                self.water_history = load_data.get('water_history', self.water_history)
+                self._last_history_minute = load_data.get('last_history_minute', self._last_history_minute)
         except Exception as e:
             print('explode', e)
 
@@ -281,7 +329,35 @@ class SimulationEngine:
             'dc_bus': self.dc_bus,
             'battery_charge': self.battery_charge,
             'gen_island': self.gen_island,
-            'edg_started': self.edg_started
+            'edg_started': self.edg_started,
+
+            # TURBINE (auto)
+            'auto_state': self.auto_state,
+            'auto_speed': self.auto_speed,
+            'oil_pump_source': self.oil_pump_source,
+
+            # HYDRAULICS (supplementary)
+            'pump1_state': self.pump1_state,
+            'fan1_state': self.fan1_state,
+            'pump_selector': self.pump_selector,
+
+            # SPILLWAY
+            'spill_open_1': self.spill_open_1,
+            'spill_open_2': self.spill_open_2,
+            'spill_1': self.spill_1,
+            'spill_2': self.spill_2,
+
+            # DEMAND
+            'current_demand': self.current_demand,
+            'seed': self.seed,
+            'timestamp': self.timestamp,
+            'prev_day': self.prev_day,
+            'today_demand': self.today_demand,
+
+            # HISTORY
+            'demand_history': self.demand_history,
+            'water_history': self.water_history,
+            'last_history_minute': self._last_history_minute
         }
 
         if not filename:
@@ -325,7 +401,10 @@ class SimulationEngine:
             self.oil_temperature -= (self.heat_exc_flow/100) * 0.3 * 0.1 * ((self.oil_temperature-self.external_temp)/100)
 
     def play_breaker_sound(self):
-        if self.OS == "Windows":
+        if getattr(sys, "frozen", False):
+            base = getattr(sys, "_MEIPASS", os.path.dirname(sys.executable))
+            playsound(os.path.join(base, "breaker.mp3"), block=False)
+        elif self.OS == "Windows":
             playsound("Hydro 1\\breaker.mp3", block=False)
         elif self.OS == "Darwin":
             playsound("Hydro 1/breaker.mp3", block=False)
@@ -344,6 +423,54 @@ class SimulationEngine:
                 self.dc_bus = False
         elif self.breaker_dc1dca or self.breaker_dc1dcb:
             self.battery_charge += 0.05
+
+    def update_time(self):
+        # updates the timestammp
+        day = self.sim_time//86400
+        hour = (self.sim_time-(day*86400))//3600
+        minute = (self.sim_time-(day*86400)-(hour*2600))//60
+        second = (self.sim_time-(day*86400)-(hour*2600)-(minute*60))
+        self.timestamp = [day+1, hour, minute, second]
+
+    def reload_demand_day(self):
+        # Reloads today_demand from the demand file for the current day (used after loading a save)
+        day = self.timestamp[0] if self.timestamp else 1
+        sep = "\\" if self.OS == "Windows" else "/" if self.OS == "Darwin" else ""
+        day_str = str(day).zfill(3)
+        with open(f"demand{sep}day_{day_str}.txt", "r") as f:
+            self.today_demand = f.readlines()
+        self.prev_day = day
+
+    def update_demand(self):
+        # updates the demand
+        if self.timestamp[0]!=self.prev_day:
+            with open(f"demand{"\\" if self.OS == "Windows" else "/" if self.OS == "Darwin" else ""}day_{"0"*(3-len(str(self.timestamp[0])))}{self.timestamp[0]}.txt", "r") as f:
+                self.today_demand = f.readlines()
+        current_demand = float(self.today_demand[math.floor(self.timestamp[1]*60+self.timestamp[2])])
+        next_demand = float(self.today_demand[math.floor(self.timestamp[1]*60+self.timestamp[2]+1)])
+        self.current_demand = round(current_demand + (next_demand-current_demand)*(self.timestamp[3]/60), 2)
+        if len(str(self.current_demand)) != 6:
+            self.current_demand+=0.01
+        self.prev_day = self.timestamp[0]
+
+    def record_history(self):
+        """Append one demand/water sample each update tick.
+
+        The simulator runs in near-real-time (1 sim-second per real second),
+        so sampling every tick gives a smooth, continuously-scrolling graph.
+        HISTORY_LEN keeps the most recent samples; older ones scroll off left.
+        """
+        self.demand_history.append(self.current_demand)
+        self.water_history.append(self.water_level)
+        if len(self.demand_history) > self.HISTORY_LEN:
+            self.demand_history.pop(0)
+        if len(self.water_history) > self.HISTORY_LEN:
+            self.water_history.pop(0)
+
+    def clear_history(self):
+        self.demand_history = []
+        self.water_history = []
+        self._last_history_minute = -1
 
     def update_res_temp(self):
         # increases temperature if preheater is on

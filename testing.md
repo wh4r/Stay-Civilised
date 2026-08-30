@@ -66,3 +66,10 @@ When new panels are added:
 - No way to open the panel
 - Panel crashes upon interaction
 - Forgetting to pass the `SimulationEngine` class to the class of the panel
+
+```python
+def sim_loop_slow_main(self):
+    ...
+    self.engine.update_time()
+```
+Forgetting to add the update time function to sim_loop_slow_main
