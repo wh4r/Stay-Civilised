@@ -23,7 +23,7 @@ class GraphsWindow(QWidget):
         main_layout.setSpacing(10)
         self.setLayout(main_layout)
 
-        main_layout.addWidget(QLabel("<h2>Historical Data (Past Hour)</h2>"))
+        main_layout.addWidget(QLabel("<h2>Historical Data (Live)</h2>"))
 
         row = QHBoxLayout()
         self.demand_graph = GraphWidget("Demand", "kW", max_points=self.engine.HISTORY_LEN,

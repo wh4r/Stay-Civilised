@@ -454,14 +454,12 @@ class SimulationEngine:
         self.prev_day = self.timestamp[0]
 
     def record_history(self):
-        """Append one (demand, water_level) sample per simulated minute.
+        """Append one demand/water sample each update tick.
 
-        Keeps the last HISTORY_LEN samples so the graph can show the past
-        hour (60 points = 60 simulated minutes)."""
-        minute = round(self.sim_time // 60)
-        if minute == self._last_history_minute:
-            return
-        self._last_history_minute = minute
+        The simulator runs in near-real-time (1 sim-second per real second),
+        so sampling every tick gives a smooth, continuously-scrolling graph.
+        HISTORY_LEN keeps the most recent samples; older ones scroll off left.
+        """
         self.demand_history.append(self.current_demand)
         self.water_history.append(self.water_level)
         if len(self.demand_history) > self.HISTORY_LEN:
