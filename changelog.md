@@ -42,9 +42,14 @@ With the addition of sounds, images, multiple menus, and save files, pyinstaller
 ## To do
 - Update save system to support new variables
 - Decrease gate delay when water fills the path (water hammer)
-- Annunciators on other panels don't work when save file is loaded
 - Add another window with grid conditions
 - Add power/rpm mode for auto control
 - Add grid frequency simulation
 - Add graph system
 - Change res. temp to be exponential
+
+## Known bugs
+- Something keeps decreasing the spillway
+- Annunciators on other panels don't work when save file is loaded
+- Cooling on shaft mode still uses old 3000rpm so it doesnt actually cool down
+- Save files are placed in the wrong location

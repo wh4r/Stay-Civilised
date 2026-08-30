@@ -49,7 +49,7 @@ class GridWindow(QWidget):
 
         hydro_prod = QVBoxLayout()
         hydro_prod.addWidget(QLabel("<h4>Hydroelectric Production</h4>"))
-        self.hydro_prod = SevenSegmentDisplay(3)
+        self.hydro_prod = SevenSegmentDisplay(4)
         self.hydro_prod.set_number(000)
         hydro_prod.addWidget(self.hydro_prod)
         generation_layout.addLayout(hydro_prod)
@@ -92,7 +92,7 @@ class GridWindow(QWidget):
 
     def update_ui(self):
         self.current_demand.set_number(self.engine.current_demand)
-        self.hydro_prod.set_number(math.floor(self.engine.power))
+        self.hydro_prod.set_number(round(self.engine.power,1))
 
     # ==========================================================
     # CLOSE EVENT

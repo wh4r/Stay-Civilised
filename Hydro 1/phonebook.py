@@ -1,9 +1,18 @@
 import json
 import os
+import sys
 
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame, QTextBrowser
 from PyQt6.QtCore import Qt
 from buttons import CustomButton
+
+
+def _resource_path(name):
+    """Resolves a bundled data file when frozen with PyInstaller."""
+    if getattr(sys, "frozen", False):
+        base = getattr(sys, "_MEIPASS", os.path.dirname(sys.executable))
+        return os.path.join(base, name)
+    return os.path.join(os.path.dirname(os.path.abspath(__file__)), name)
 
 class PhoneWindow(QWidget):
     def __init__(self, engine):
@@ -13,7 +22,7 @@ class PhoneWindow(QWidget):
         self.setStyleSheet("background-color: #1a1a1a; color: white;")
         self.setMinimumSize(760, 520)
 
-        phonebook_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "phonebook.json")
+        phonebook_path = _resource_path("phonebook.json")
         with open(phonebook_path, "r") as f:
             self.phonebook = json.load(f)
 
@@ -79,12 +88,12 @@ class PhoneWindow(QWidget):
         dial_layout.addLayout(numpad_row_3)
 
         numpad_row_4 = QHBoxLayout()
-        self.numpad_call = CustomButton("🟢", "#080")
+        self.numpad_call = CustomButton("☏", "#080")
         self.numpad_0 = CustomButton("0")
-        self.numpad_end = CustomButton("📞", "#800")
-        numpad_row_4.addWidget(self.numpad_call)
-        numpad_row_4.addWidget(self.numpad_0)
+        self.numpad_end = CustomButton("⌫", "#800")
         numpad_row_4.addWidget(self.numpad_end)
+        numpad_row_4.addWidget(self.numpad_0)
+        numpad_row_4.addWidget(self.numpad_call)
         dial_layout.addLayout(numpad_row_4)
 
         phonebook_layout.addLayout(dial_layout)
@@ -168,6 +177,8 @@ class PhoneWindow(QWidget):
         self.contact = None
         self.node_key = ""
         self.chat_header.setText("<h4>Messaging</h4>")
+        self.dialed = ""
+        self.display.setText(self.dialed)
 
     def reset_chat(self):
         self.chat_box.clear()

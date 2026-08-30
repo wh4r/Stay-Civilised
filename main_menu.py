@@ -3,16 +3,19 @@ import os
 import math
 import subprocess
 import random
+import json
 from PyQt6.QtWidgets import (
     QApplication, QWidget, QFrame, QLabel, QPushButton, 
     QVBoxLayout, QHBoxLayout, QGridLayout, QGraphicsDropShadowEffect,
-    QProgressBar
+    QProgressBar, QDialog, QInputDialog, QListWidget, QScrollArea,
+    QMessageBox
 )
 from PyQt6.QtCore import Qt, QTimer, QUrl
 from PyQt6.QtGui import QPainter, QPixmap, QColor, QFont, QIcon, QPen, QRadialGradient
 from PyQt6.QtMultimedia import QMediaPlayer, QAudioOutput
 
 from cloud_save import CloudSaveWindow
+import demand_generator
 
 class CRTOverlay(QWidget):
     def __init__(self, parent):
@@ -42,6 +45,7 @@ class MainMenuWindow(QWidget):
         
         # 1. Load Assets
         self.base_dir = os.path.dirname(os.path.abspath(__file__))
+        self.work_dir = os.getcwd()
         
         dam_path = os.path.join(self.base_dir, "dam.png")
         if os.path.exists(dam_path):
@@ -85,6 +89,13 @@ class MainMenuWindow(QWidget):
         # 4. Process tracking
         self.sim_process = None
         self.poll_timer = None
+        self.launch_args = []
+
+        # Save path (relative to project root)
+        if os.name == "nt":
+            self.save_path = "Hydro 1\\saves\\"
+        else:
+            self.save_path = "Hydro 1/saves/"
         
         # 5. Build UI Layout
         self.init_ui()
@@ -445,13 +456,175 @@ class MainMenuWindow(QWidget):
         self.cloud_win.activateWindow()
 
     def launch_simulator(self):
+        # Prompt the user to either load a save or start a new game
+        self.choose_session()
+
+    def choose_session(self):
+        dlg = QDialog(self)
+        dlg.setWindowTitle("START SESSION")
+        dlg.setModal(True)
+        dlg.setStyleSheet("""
+            QDialog {
+                background-color: #0a0f0a;
+                color: #33ff33;
+            }
+            QLabel {
+                color: #33ff33;
+                font-family: 'Courier New', 'Consolas', 'Terminal', monospace;
+                font-weight: bold;
+            }
+            QPushButton {
+                background-color: #0d3b0d;
+                color: #33ff33;
+                border: 2px solid #33ff33;
+                border-radius: 4px;
+                padding: 14px 20px;
+                font-family: 'Courier New', 'Consolas', 'Terminal', monospace;
+                font-size: 15px;
+                font-weight: bold;
+            }
+            QPushButton:hover { background-color: #146314; }
+            QPushButton:pressed { background-color: #082208; }
+        """)
+        layout = QVBoxLayout(dlg)
+        layout.setSpacing(18)
+        layout.addWidget(QLabel("> SELECT OPERATING MODE", alignment=Qt.AlignmentFlag.AlignCenter))
+
+        new_btn = QPushButton("NEW GAME")
+        load_btn = QPushButton("LOAD SAVE")
+        layout.addWidget(new_btn)
+        layout.addWidget(load_btn)
+
+        def on_new():
+            dlg.accept()
+            self.start_new_game()
+
+        def on_load():
+            dlg.accept()
+            self.load_save_game()
+
+        new_btn.clicked.connect(on_new)
+        load_btn.clicked.connect(on_load)
+        dlg.exec()
+
+    def start_new_game(self):
+        # Prompt for a seed (default: random integer)
+        default_seed = random.randint(10000, 99999)
+        text, ok = QInputDialog.getText(
+            self, "NEW GAME - SEED",
+            "ENTER SIMULATION SEED\n(default is random):",
+            text=str(default_seed)
+        )
+        if not ok:
+            self.reset_menu_state()
+            return
+        try:
+            seed = int(text.strip())
+        except ValueError:
+            QMessageBox.warning(self, "INVALID SEED", "Seed must be an integer.")
+            self.reset_menu_state()
+            return
+
+        # (Re)generate the demand profile for this seed
+        try:
+            demand_generator.generate_demand(seed)
+        except Exception as e:
+            QMessageBox.critical(self, "DEMAND GENERATION FAILED", str(e))
+            self.reset_menu_state()
+            return
+
+        self.launch_args = ["--new", "--seed", str(seed)]
+        self.start_boot_sequence()
+
+    def load_save_game(self):
+        # List available saves and let the user pick one
+        if not os.path.exists(self.save_path):
+            os.makedirs(self.save_path)
+        files = sorted([f for f in os.listdir(self.save_path) if f.endswith('.json')])
+        if not files:
+            QMessageBox.information(self, "NO SAVES", "No save files found.\nStart a new game instead.")
+            self.reset_menu_state()
+            return
+
+        dlg = QDialog(self)
+        dlg.setWindowTitle("LOAD SAVE")
+        dlg.setModal(True)
+        dlg.resize(420, 360)
+        dlg.setStyleSheet("""
+            QDialog { background-color: #0a0f0a; color: #33ff33; }
+            QLabel { color: #33ff33; font-family: 'Courier New', monospace; font-weight: bold; }
+            QListWidget {
+                background-color: #061006; color: #33ff33; border: 2px solid #33ff33;
+                border-radius: 4px; font-family: 'Courier New', monospace; padding: 4px;
+            }
+            QListWidget::item { padding: 8px; }
+            QListWidget::item:selected { background-color: #146314; }
+            QPushButton {
+                background-color: #0d3b0d; color: #33ff33; border: 2px solid #33ff33;
+                border-radius: 4px; padding: 10px; font-family: 'Courier New', monospace; font-weight: bold;
+            }
+            QPushButton:hover { background-color: #146314; }
+        """)
+        layout = QVBoxLayout(dlg)
+        layout.addWidget(QLabel("> SELECT SAVE FILE", alignment=Qt.AlignmentFlag.AlignCenter))
+        save_list = QListWidget()
+        save_list.addItems(files)
+        layout.addWidget(save_list)
+        btn_layout = QHBoxLayout()
+        cancel_btn = QPushButton("CANCEL")
+        load_btn = QPushButton("LOAD")
+        btn_layout.addWidget(cancel_btn)
+        btn_layout.addWidget(load_btn)
+        layout.addLayout(btn_layout)
+
+        def do_load():
+            item = save_list.currentItem()
+            if not item:
+                return
+            dlg.accept()
+            self.finish_load_save(item.text())
+
+        cancel_btn.clicked.connect(dlg.reject)
+        load_btn.clicked.connect(do_load)
+
+        def on_double_click(item):
+            self.finish_load_save(item.text())
+            dlg.accept()
+
+        save_list.itemDoubleClicked.connect(on_double_click)
+        if dlg.exec() == QDialog.DialogCode.Accepted:
+            dlg.deleteLater()
+
+    def finish_load_save(self, filename):
+        save_file = os.path.join(self.save_path, filename)
+        try:
+            with open(save_file, 'r') as f:
+                data = json.load(f)
+            seed = int(data.get('seed', 86557))
+        except Exception as e:
+            QMessageBox.critical(self, "LOAD FAILED", f"Could not read save file:\n{e}")
+            self.reset_menu_state()
+            return
+
+        # Regenerate the demand profile from the save's seed
+        try:
+            demand_generator.generate_demand(seed)
+        except Exception as e:
+            QMessageBox.critical(self, "DEMAND GENERATION FAILED", str(e))
+            self.reset_menu_state()
+            return
+
+        self.launch_args = ["--load", save_file.replace("\\", "/")]
+        self.start_boot_sequence()
+
+    def start_boot_sequence(self):
         # Start mock boot loading sequence
         self.is_loading = True
         self.launch_btn.setEnabled(False)
         self.launch_btn.setText("LOADING...")
         self.progress_bar.setValue(0)
         self.progress_bar.show()
-        
+
         self.loading_progress = 0
         self.loading_timer = QTimer(self)
         self.loading_timer.timeout.connect(self.advance_loading)
@@ -526,7 +699,8 @@ class MainMenuWindow(QWidget):
         
         # Launch simulator.py with working directory remaining at project root
         try:
-            self.sim_process = subprocess.Popen([sys.executable, "Hydro 1/simulator.py"])
+            launch_cmd = [sys.executable, "Hydro 1/simulator.py"] + self.launch_args
+            self.sim_process = subprocess.Popen(launch_cmd)
             
             # Start QTimer to poll for completion
             self.poll_timer = QTimer(self)
@@ -538,6 +712,7 @@ class MainMenuWindow(QWidget):
 
     def reset_menu_state(self):
         self.is_loading = False
+        self.launch_args = []
         self.progress_bar.hide()
         self.progress_bar.setValue(0)
         self.launch_btn.setEnabled(True)

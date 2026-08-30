@@ -6,6 +6,23 @@ import numpy as np
 import sounddevice as sd
 from playsound3 import playsound
 
+# Custom command-line launch support (used by the main menu)
+def parse_launch_args(argv):
+    """Parses --new --seed N / --load PATH arguments into a dict."""
+    args = {'mode': 'new', 'seed': None, 'load': None}
+    i = 0
+    while i < len(argv):
+        arg = argv[i]
+        if arg == '--seed' and i + 1 < len(argv):
+            args['seed'] = int(argv[i + 1]); i += 1
+        elif arg == '--load' and i + 1 < len(argv):
+            args['mode'] = 'load'
+            args['load'] = argv[i + 1]; i += 1
+        elif arg == '--new':
+            args['mode'] = 'new'
+        i += 1
+    return args
+
 # Import custom modules
 from annunciators import Annunciator
 from gauges import UniversalGauge, LevelGauge
@@ -23,9 +40,10 @@ from console import ConsoleWindow
 from spillway import SpillwayWindow
 from phonebook import PhoneWindow
 from grid import GridWindow
+from graphs_window import GraphsWindow
 
 class HydroSimulator(QMainWindow):
-    def __init__(self):
+    def __init__(self, launch_args=None):
         super().__init__()
         self.setWindowTitle("Hydroelectric Plant Control System")
         self.setStyleSheet("background-color: #121212;")
@@ -33,6 +51,14 @@ class HydroSimulator(QMainWindow):
 
         # Initialize simulation engine
         self.engine = SimulationEngine()
+
+        # Apply launch configuration from the main menu (new game with seed, or load a save)
+        launch_args = launch_args or parse_launch_args(sys.argv[1:])
+        if launch_args.get('mode') == 'load' and launch_args.get('load'):
+            self.engine.load_file(launch_args['load'])
+            self.engine.reload_demand_day()
+        elif launch_args.get('seed') is not None:
+            self.engine.seed = launch_args['seed']
         
         # Hydraulics Window
         self.hydraulics_win = HydraulicsWindow(self.engine)
@@ -69,6 +95,9 @@ class HydroSimulator(QMainWindow):
 
         # Grid window
         self.grid_win = GridWindow(self.engine)
+
+        # Graphs window
+        self.graphs_win = GraphsWindow(self.engine)
 
         # Set sound
         self.turbine_phase_hum = 0.0
@@ -150,6 +179,10 @@ class HydroSimulator(QMainWindow):
         phone_window.setShortcut('6')
         phone_window.triggered.connect(self.toggle_phone)
         window_menu.addAction(phone_window)
+        graphs_window = QAction('&Graphs', self)
+        graphs_window.setShortcut('7')
+        graphs_window.triggered.connect(self.toggle_graphs)
+        window_menu.addAction(graphs_window)
         window_menu.setFixedWidth(150)
 
         debug_menu = menu_bar.addMenu("&Debug")
@@ -430,6 +463,8 @@ class HydroSimulator(QMainWindow):
 
         self.engine.update_demand()
         self.engine.update_time()
+        self.engine.record_history()
+        self.graphs_win.update_ui()
         self.grid_win.update_ui()
 
         # electricity
@@ -599,6 +634,12 @@ class HydroSimulator(QMainWindow):
             else:
                 self.grid_win.show()
 
+    def toggle_graphs(self):
+        if self.graphs_win.isVisible():
+            self.graphs_win.hide()
+        else:
+            self.graphs_win.show()
+
     def sound_callback(self, outdata, frames, time, status):
         # 1. ALWAYS initialize the chunk with zeros right at the start
         # This acts as our safety net. If we're muted, it just stays dead silent.
@@ -659,6 +700,6 @@ class HydroSimulator(QMainWindow):
 # main stuff
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    window = HydroSimulator()
+    window = HydroSimulator(parse_launch_args(sys.argv[1:]))
     window.show()
     sys.exit(app.exec())

@@ -97,7 +97,21 @@ a = """        # Simulation variables
         self.gen_island = False
 
         # EDG
-        self.edg_started = False"""
+        self.edg_started = False
+
+        # SPILLWAY
+        self.spill_open_1 = 0
+        self.spill_open_2 = 0
+        self.spill_1 = 0
+        self.spill_2 = 0
+
+        # DEMAND
+        self.current_demand = 0
+        self.seed = 86557
+        self.timestamp = [1, 0, 0, 0]
+        self.prev_day = 1
+        self.today_demand = []
+"""
 
 c = []
 b = a.split("\n")
