@@ -7,8 +7,7 @@ class GraphsWindow(QWidget):
     """Window showing live historical graphs (demand + forebay level).
 
     Both graphs read their arrays from the engine's rolling history, so they
-    display a rolling 20-minute window (40 samples, one per 30 simulated
-    seconds).
+    display the most recent samples as a continuously scrolling line.
     """
 
     def __init__(self, engine):

@@ -31,16 +31,23 @@ With the addition of sounds, images, multiple menus, and save files, pyinstaller
 - Fixed annunciator class self.blink not activating when self.persistent is False
 - Added automatic turbine control
 
-## v0.4.1
+## v1.0.0
 - Added orange and red bars to the gauges to more clearly indicate the operating values
 - Changed RPM (500RPM) to match that of a more realistic 12 pole generator
 - Added spillway control
 - Made water outflow relative to water level
-- Added phone (functions missing)
-- Added demand calculations
+- Added 50 wind turbines (experimental wind sim)
+- Updated save files
+- Added potion to store save files on the cloud
+- Save files are placed in the correct location
+- Fixed spillway constantly decreasing
+- Turbine cooling fixed (i think)
+- Experimental:
+    - Phone
+    - Demand (demand is currently impossible to meet)
+    - Demand seed option when creating new game
 
 ## To do
-- Update save system to support new variables
 - Decrease gate delay when water fills the path (water hammer)
 - Add another window with grid conditions
 - Add power/rpm mode for auto control
@@ -49,7 +56,4 @@ With the addition of sounds, images, multiple menus, and save files, pyinstaller
 - Change res. temp to be exponential
 
 ## Known bugs
-- Something keeps decreasing the spillway
 - Annunciators on other panels don't work when save file is loaded
-- Cooling on shaft mode still uses old 3000rpm so it doesnt actually cool down
-- Save files are placed in the wrong location

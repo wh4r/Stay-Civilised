@@ -50,6 +50,7 @@ Python does not create root certificates by default. To create a root certificat
 | **v0.3.0-demo** | Panel functionality | ✅ Live | High |
 | **v0.4.0-demo** | Automatic turbine control | ✅ Live | Medium |
 | **v1.0.0-alpha** | Spillway, demand, phone | 🏗️ In dev | High |
-| **v1.1.0-alpha** | Maintenance | ⏳ Planned | High |
+| **v1.1.0-alpha** | Electricity | ⏳ Planned | High |
+| **v2.0.0-alpha** | Maintenance | ⏳ Planned | High |
 
 Versions are MAJOR.MINOR.PATCH-STAGE

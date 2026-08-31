@@ -140,20 +140,27 @@ class GraphWidget(QWidget):
             )
 
         # Plot line
-        if len(self.data) >= 2:
-            n = len(self.data)
-            poly = QPolygonF()
-            for idx, value in enumerate(self.data):
-                x = plot.left() + plot.width() * (idx / (n - 1))
+        if len(self.data) >= 1:
+            if len(self.data) >= 2:
+                n = len(self.data)
+                poly = QPolygonF()
+                for idx, value in enumerate(self.data):
+                    x = plot.left() + plot.width() * (idx / (n - 1))
+                    frac = (value - lo) / (hi - lo) if hi != lo else 0.0
+                    y = plot.bottom() - plot.height() * frac
+                    poly.append(QPointF(x, y))
+                painter.setBrush(Qt.BrushStyle.NoBrush)
+                painter.setPen(QPen(self.color, 2))
+                painter.drawPolyline(poly)
+                last = poly.last()
+            else:
+                value = self.data[0]
+                x = plot.right()
                 frac = (value - lo) / (hi - lo) if hi != lo else 0.0
                 y = plot.bottom() - plot.height() * frac
-                poly.append(QPointF(x, y))
-            painter.setBrush(Qt.BrushStyle.NoBrush)
-            painter.setPen(QPen(self.color, 2))
-            painter.drawPolyline(poly)
+                last = QPointF(x, y)
 
             # Last-point marker
-            last = poly.last()
             painter.setBrush(self.color)
             painter.setPen(Qt.PenStyle.NoPen)
             painter.drawEllipse(last, 3, 3)

@@ -127,7 +127,7 @@ class SimulationEngine:
 
         # Rolling history (demand + forebay level), sampled once per 30
         # simulated seconds, keeping a rolling 20-minute window.
-        self.HISTORY_LEN = 40
+        self.HISTORY_LEN = 120
         self.demand_history = []
         self.water_history = []
         self._last_history_period = -1
@@ -163,8 +163,8 @@ class SimulationEngine:
             self.today_demand=f.readlines()
 
     def update_spillway(self):
-        self.spill_1 = min(100, max(0, self.spill_1 + self.spill_open_1))*self.hyd_coef
-        self.spill_2 = min(100, max(0, self.spill_2 + self.spill_open_2))*self.hyd_coef
+        self.spill_1 = min(100, max(0, self.spill_1 + self.spill_open_1*self.hyd_coef))
+        self.spill_2 = min(100, max(0, self.spill_2 + self.spill_open_2*self.hyd_coef))
 
     def load_file(self, filepath=None):
         try:
@@ -406,7 +406,7 @@ class SimulationEngine:
             else:
                 filename = f"{self.path}saves/{datetime.now().strftime("%Y%m%d_%H%M%S")}"
         else:
-            filename = f"{self.path}{filename}"
+            filename = f"{self.path}{"saves\\" if self.OS == "Windows" else "saves/" if self.OS == "Darwin" else ""}{filename}"
         try:
             with open(filename, 'w') as f:
                 json.dump(save_variables, f, indent=4)
@@ -439,7 +439,7 @@ class SimulationEngine:
         if self.oil_pump_source == 0 and self.ac_bus_a:
             self.oil_temperature -= (self.oil_pump_power/100) * (self.heat_exc_flow/100) * 0.1 * ((self.oil_temperature-self.external_temp)/100)
         elif self.oil_pump_source == 1:
-            self.oil_temperature -= (self.current_rpm/50000) * (self.heat_exc_flow/100) * 0.1 * ((self.oil_temperature-self.external_temp)/100)
+            self.oil_temperature -= (self.current_rpm/500) * (self.heat_exc_flow/100) * 0.1 * ((self.oil_temperature-self.external_temp)/100)
         elif self.dc_bus:
             self.oil_temperature -= (self.heat_exc_flow/100) * 0.3 * 0.1 * ((self.oil_temperature-self.external_temp)/100)
 
@@ -497,16 +497,13 @@ class SimulationEngine:
         self.prev_day = self.timestamp[0]
 
     def record_history(self):
-        """Append one (demand, water_level) sample per 30 simulated seconds.
+        """Append one (demand, water_level) sample every update tick.
 
-        The simulator runs near real-time (1 sim-sec per real sec), so a
-        new point lands every 30 real-world seconds. HISTORY_LEN keeps the
-        last 40 samples — a rolling 20-minute window and scrolls steadily.
+        The simulator runs near real-time (1 sim-sec per real second), so
+        sampling each tick (~10 per second) lets the graph fill and scroll
+        continuously instead of appearing frozen. HISTORY_LEN keeps a rolling
+        window of the most recent samples; older ones scroll off to the left.
         """
-        period = int(self.sim_time // 30)
-        if period == self._last_history_period:
-            return
-        self._last_history_period = period
         self.demand_history.append(self.current_demand)
         self.water_history.append(self.water_level)
         if len(self.demand_history) > self.HISTORY_LEN:
