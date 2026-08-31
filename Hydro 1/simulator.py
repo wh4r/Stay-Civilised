@@ -40,6 +40,7 @@ from console import ConsoleWindow
 from spillway import SpillwayWindow
 from phonebook import PhoneWindow
 from grid import GridWindow
+from wind_farm import WindFarmWindow
 from graphs_window import GraphsWindow
 
 class HydroSimulator(QMainWindow):
@@ -95,6 +96,9 @@ class HydroSimulator(QMainWindow):
 
         # Grid window
         self.grid_win = GridWindow(self.engine)
+
+        # Wind farm window
+        self.wind_farm_win = WindFarmWindow(self.engine)
 
         # Graphs window
         self.graphs_win = GraphsWindow(self.engine)
@@ -152,6 +156,10 @@ class HydroSimulator(QMainWindow):
         grid_window.setShortcut('0')
         grid_window.triggered.connect(self.toggle_grid)
         grid_menu.addAction(grid_window)
+        wind_farm_action = QAction('&Wind Farm', self)
+        wind_farm_action.setShortcut('8')
+        wind_farm_action.triggered.connect(self.toggle_wind_farm)
+        grid_menu.addAction(wind_farm_action)
         grid_menu.setFixedWidth(150)
 
         window_menu = menu_bar.addMenu('&Window')
@@ -405,6 +413,7 @@ class HydroSimulator(QMainWindow):
                     self.alarm_interlock, self.low_hyd_pres, self.bus_a_pwr, 
                     self.bus_b_pwr, self.bus_dc_pwr, self.malfunction]:
             alarm.toggle_blink()
+        self.engine.toggle_wind_flash()
 
     def synchronise(self):
         if self.engine.sync:
@@ -458,6 +467,8 @@ class HydroSimulator(QMainWindow):
         self.engine.update_turbine_water_level()
         self.engine.update_pump_reservoir()
         self.engine.update_systems(0.1)
+        self.engine.update_wind_speed(0.1)
+        self.engine.update_wind_turbines(0.1)
         self.engine.auto_turbine_control()
         self.alarm_interlock.set_state(self.engine.check_interlock())
 
@@ -466,6 +477,7 @@ class HydroSimulator(QMainWindow):
         self.engine.record_history()
         self.graphs_win.update_ui()
         self.grid_win.update_ui()
+        self.wind_farm_win.update_ui()
 
         # electricity
         if self.engine.gen_island:
@@ -633,6 +645,12 @@ class HydroSimulator(QMainWindow):
                 self.grid_win.hide()
             else:
                 self.grid_win.show()
+
+    def toggle_wind_farm(self):
+        if self.wind_farm_win.isVisible():
+            self.wind_farm_win.hide()
+        else:
+            self.wind_farm_win.show()
 
     def toggle_graphs(self):
         if self.graphs_win.isVisible():

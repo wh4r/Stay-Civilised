@@ -28,7 +28,8 @@ POLYS = {
 
 
 class SevenSegmentDisplay(QWidget):
-    def __init__(self, length=4, parent=None):
+    def __init__(self, length=4, decimal_offset=17,parent=None):
+        self.decimal_offset = decimal_offset
         super().__init__(parent)
         self.length = length
         self.digits = [' '] * length
@@ -103,6 +104,6 @@ class SevenSegmentDisplay(QWidget):
 
             if self.dps[i]:
                 painter.setBrush(ON_COLOR)
-                painter.drawEllipse(QPointF(17, 9.5), 1.0, 1.0)
+                painter.drawEllipse(QPointF(self.decimal_offset, 9.5), 1.0, 1.0)
 
             painter.restore()

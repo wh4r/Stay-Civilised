@@ -5,7 +5,7 @@ from PyQt6.QtWidgets import (
     QLabel,
     QFrame,
     QGridLayout,
-    QSizePolicy
+    QSizePolicy,
 )
 import math
 
@@ -54,6 +54,15 @@ class GridWindow(QWidget):
         hydro_prod.addWidget(self.hydro_prod)
         generation_layout.addLayout(hydro_prod)
 
+        generation_layout.addWidget(self.create_vseparator())
+
+        wind_total = QVBoxLayout()
+        wind_total.addWidget(QLabel("<h4>Wind Generation</h4>"))
+        self.wind_total = SevenSegmentDisplay(6)
+        self.wind_total.set_number(0)
+        wind_total.addWidget(self.wind_total)
+        generation_layout.addLayout(wind_total)
+
         main_layout.addLayout(generation_layout)
 
         main_layout.addWidget(self.create_separator())
@@ -93,6 +102,7 @@ class GridWindow(QWidget):
     def update_ui(self):
         self.current_demand.set_number(self.engine.current_demand)
         self.hydro_prod.set_number(round(self.engine.power,1))
+        self.wind_total.set_number(round(self.engine.wind_total_power, 1))
 
     # ==========================================================
     # CLOSE EVENT

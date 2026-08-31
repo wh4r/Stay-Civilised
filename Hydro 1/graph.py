@@ -90,7 +90,13 @@ class GraphWidget(QWidget):
                 lo = 0
             else:
                 hi = 1
-        margin = (hi - lo) * 0.1 if hi != lo else 0.5
+        span = hi - lo
+        if span < 40:
+            mid = (lo + hi) / 2
+            lo = mid - 20
+            hi = mid + 20
+            span = 40
+        margin = span * 0.35 if span != 0 else 0.5
         return lo - margin, hi + margin
 
     def paintEvent(self, event):
@@ -142,6 +148,7 @@ class GraphWidget(QWidget):
                 frac = (value - lo) / (hi - lo) if hi != lo else 0.0
                 y = plot.bottom() - plot.height() * frac
                 poly.append(QPointF(x, y))
+            painter.setBrush(Qt.BrushStyle.NoBrush)
             painter.setPen(QPen(self.color, 2))
             painter.drawPolyline(poly)
 
@@ -152,6 +159,7 @@ class GraphWidget(QWidget):
             painter.drawEllipse(last, 3, 3)
 
         # Axes frame
+        painter.setBrush(Qt.BrushStyle.NoBrush)
         painter.setPen(QPen(QColor(160, 160, 160), 1))
         painter.drawRect(plot)
 

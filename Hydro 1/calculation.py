@@ -7,6 +7,7 @@ import sys
 import os
 from datetime import datetime
 from simple_pid import PID
+from pathlib import Path
 
 class SimulationEngine:
     def __init__(self):
@@ -124,12 +125,25 @@ class SimulationEngine:
         self.seed = 86557
         self.today_demand = []
 
-        # Rolling history (demand + forebay level), sampled once per simulated
-        # minute so one point per minute over the "past hour" is kept.
-        self.HISTORY_LEN = 60
+        # Rolling history (demand + forebay level), sampled once per 30
+        # simulated seconds, keeping a rolling 20-minute window.
+        self.HISTORY_LEN = 40
         self.demand_history = []
         self.water_history = []
-        self._last_history_minute = -1
+        self._last_history_period = -1
+
+        # WIND FARM — 50 × 10 MW turbines
+        self.wind_speed = 8.0
+        self.wind_turbine_count = 50
+        self.wind_turbine_rating = 10.0
+        # 0=OFF, 1=STARTING (flashing), 2=RUNNING, 3=STOPPING (flashing)
+        self.wind_turbines_state = [0] * 50
+        self.wind_turbines_timer = [0.0] * 50
+        self.wind_turbines_power = [0.0] * 50
+        self.wind_total_power = 0.0
+        self.wind_flash = False
+        # per-turbine local wind offset (sensor vs. farm spread) — high inertia spatially
+        self.wind_turbine_bias = [random.uniform(-1.5, 1.5) for _ in range(50)]
 
         # EDG
         self.edg_started = False
@@ -254,7 +268,25 @@ class SimulationEngine:
                 # HISTORY
                 self.demand_history = load_data.get('demand_history', self.demand_history)
                 self.water_history = load_data.get('water_history', self.water_history)
-                self._last_history_minute = load_data.get('last_history_minute', self._last_history_minute)
+                self._last_history_period = load_data.get(
+                    'last_history_period',
+                    load_data.get('last_history_second',
+                        load_data.get('last_history_minute', self._last_history_period))
+                )
+
+                # WIND FARM
+                self.wind_speed = load_data.get('wind_speed', self.wind_speed)
+                self.wind_turbines_state = load_data.get('wind_turbines_state', self.wind_turbines_state)
+                self.wind_turbines_timer = load_data.get('wind_turbines_timer', self.wind_turbines_timer)
+                self.wind_turbines_power = load_data.get('wind_turbines_power', self.wind_turbines_power)
+                self.wind_total_power = load_data.get('wind_total_power', self.wind_total_power)
+                self.wind_turbine_bias = load_data.get('wind_turbine_bias', self.wind_turbine_bias)
+                # pad/truncate if count changed
+                if len(self.wind_turbines_state) != self.wind_turbine_count:
+                    self.wind_turbines_state = (self.wind_turbines_state + [0]*50)[:50]
+                    self.wind_turbines_timer = (self.wind_turbines_timer + [0.0]*50)[:50]
+                    self.wind_turbines_power = (self.wind_turbines_power + [0.0]*50)[:50]
+                    self.wind_turbine_bias = (self.wind_turbine_bias + [0.0]*50)[:50]
         except Exception as e:
             print('explode', e)
 
@@ -357,7 +389,15 @@ class SimulationEngine:
             # HISTORY
             'demand_history': self.demand_history,
             'water_history': self.water_history,
-            'last_history_minute': self._last_history_minute
+            'last_history_period': self._last_history_period,
+
+            # WIND FARM
+            'wind_speed': self.wind_speed,
+            'wind_turbines_state': self.wind_turbines_state,
+            'wind_turbines_timer': self.wind_turbines_timer,
+            'wind_turbines_power': self.wind_turbines_power,
+            'wind_total_power': self.wind_total_power,
+            'wind_turbine_bias': self.wind_turbine_bias
         }
 
         if not filename:
@@ -375,8 +415,11 @@ class SimulationEngine:
             print(f"file blew up: {e}")
 
     def read_log(self):
-        with open(f"{self.path}log.txt", "r") as f:
-            return f.readlines()
+        if Path(f"{self.path}log.txt").is_file():
+            with open(f"{self.path}log.txt", "r") as f:
+                return f.readlines()
+        else:
+            Path("{self.path}log.txt").touch()
 
     def log(self, log = 'error'):
         with open(f"{self.path}log.txt", "a") as f:
@@ -428,8 +471,8 @@ class SimulationEngine:
         # updates the timestammp
         day = self.sim_time//86400
         hour = (self.sim_time-(day*86400))//3600
-        minute = (self.sim_time-(day*86400)-(hour*2600))//60
-        second = (self.sim_time-(day*86400)-(hour*2600)-(minute*60))
+        minute = (self.sim_time-(day*86400)-(hour*3600))//60
+        second = (self.sim_time-(day*86400)-(hour*3600)-(minute*60))
         self.timestamp = [day+1, hour, minute, second]
 
     def reload_demand_day(self):
@@ -447,19 +490,23 @@ class SimulationEngine:
             with open(f"demand{"\\" if self.OS == "Windows" else "/" if self.OS == "Darwin" else ""}day_{"0"*(3-len(str(self.timestamp[0])))}{self.timestamp[0]}.txt", "r") as f:
                 self.today_demand = f.readlines()
         current_demand = float(self.today_demand[math.floor(self.timestamp[1]*60+self.timestamp[2])])
-        next_demand = float(self.today_demand[math.floor(self.timestamp[1]*60+self.timestamp[2]+1)])
+        next_demand = float(self.today_demand[min(math.floor(self.timestamp[1]*60+self.timestamp[2]+1), len(self.today_demand)-1)])
         self.current_demand = round(current_demand + (next_demand-current_demand)*(self.timestamp[3]/60), 2)
         if len(str(self.current_demand)) != 6:
             self.current_demand+=0.01
         self.prev_day = self.timestamp[0]
 
     def record_history(self):
-        """Append one demand/water sample each update tick.
+        """Append one (demand, water_level) sample per 30 simulated seconds.
 
-        The simulator runs in near-real-time (1 sim-second per real second),
-        so sampling every tick gives a smooth, continuously-scrolling graph.
-        HISTORY_LEN keeps the most recent samples; older ones scroll off left.
+        The simulator runs near real-time (1 sim-sec per real sec), so a
+        new point lands every 30 real-world seconds. HISTORY_LEN keeps the
+        last 40 samples — a rolling 20-minute window and scrolls steadily.
         """
+        period = int(self.sim_time // 30)
+        if period == self._last_history_period:
+            return
+        self._last_history_period = period
         self.demand_history.append(self.current_demand)
         self.water_history.append(self.water_level)
         if len(self.demand_history) > self.HISTORY_LEN:
@@ -470,7 +517,7 @@ class SimulationEngine:
     def clear_history(self):
         self.demand_history = []
         self.water_history = []
-        self._last_history_minute = -1
+        self._last_history_period = -1
 
     def update_res_temp(self):
         # increases temperature if preheater is on
@@ -819,6 +866,97 @@ class SimulationEngine:
             self.pump2_flow += (0.0 - self.pump2_flow) * 0.1
         self.water_level += self.pump2_flow * 0.0001
         self.water_level = min(100.0, self.water_level)
+
+    # --------------------------------------------------------------
+    # WIND FARM
+    # --------------------------------------------------------------
+    def wind_power_for_speed(self, v):
+        cut_in = 3.0
+        rated = 12.0
+        cut_out = 25.0
+        if v < cut_in or v > cut_out:
+            return 0.0
+        if v >= rated:
+            return self.wind_turbine_rating
+        return self.wind_turbine_rating * ((v - cut_in) / (rated - cut_in)) ** 3
+
+    def update_wind_speed(self, dt=0.1):
+        step = random.uniform(-0.3, 0.3) * dt * 10
+        self.wind_speed += step
+        if self.wind_speed < 3.0:
+            self.wind_speed += 0.3
+        elif self.wind_speed > 16.0:
+            self.wind_speed -= 0.3
+        if random.random() < 0.005:
+            self.wind_speed += random.uniform(-4, 4)
+        self.wind_speed = max(0.0, min(30.0, self.wind_speed))
+
+    def update_wind_turbines(self, dt=0.1):
+        # slowly wander per-turbine local bias (spatial wind variation)
+        for i in range(self.wind_turbine_count):
+            self.wind_turbine_bias[i] += random.uniform(-0.04, 0.04) * dt
+            if self.wind_turbine_bias[i] > 2.0:
+                self.wind_turbine_bias[i] = 2.0
+            elif self.wind_turbine_bias[i] < -2.0:
+                self.wind_turbine_bias[i] = -2.0
+        total = 0.0
+        for i in range(self.wind_turbine_count):
+            state = self.wind_turbines_state[i]
+            timer = self.wind_turbines_timer[i]
+            power = self.wind_turbines_power[i]
+            if state == 1:  # STARTING — flash 50-70 s then go live
+                timer -= dt
+                if timer <= 0:
+                    self.wind_turbines_state[i] = 2
+                    self.wind_turbines_timer[i] = 0.0
+                else:
+                    self.wind_turbines_timer[i] = timer
+                    power = 0.0
+            elif state == 3:  # STOPPING — flash + high-inertia coast down
+                timer -= dt
+                # large rotor inertia — decay slowly toward 0
+                tau_stop = 20.0
+                power += (0.0 - power) * (dt / tau_stop)
+                if power < 0.05:
+                    power = 0.0
+                if timer <= 0 and power <= 0.05:
+                    self.wind_turbines_state[i] = 0
+                    self.wind_turbines_timer[i] = 0.0
+                    power = 0.0
+                else:
+                    self.wind_turbines_timer[i] = max(0.0, timer)
+            elif state == 2:  # RUNNING — high rotational inertia
+                local_wind = self.wind_speed + self.wind_turbine_bias[i] + random.uniform(-0.25, 0.25)
+                local_wind = max(0.0, local_wind)
+                target = self.wind_power_for_speed(local_wind)
+                # torque/inertia → slow exponential approach
+                tau = 28.0
+                power += (target - power) * (dt / tau)
+                # clamp tiny residual
+                if abs(power - target) < 0.01:
+                    power = target
+            else:  # OFF
+                power = 0.0
+            self.wind_turbines_power[i] = max(0.0, power)
+            total += self.wind_turbines_power[i]
+        self.wind_total_power = total
+
+    def wind_turbine_toggle(self, idx):
+        if not 0 <= idx < self.wind_turbine_count:
+            return
+        state = self.wind_turbines_state[idx]
+        if state == 0:  # OFF -> STARTING (random 50-70 s countdown)
+            self.wind_turbines_state[idx] = 1
+            self.wind_turbines_timer[idx] = float(random.randint(50, 70))
+            self.wind_turbines_power[idx] = 0.0
+        elif state == 2:  # RUNNING -> STOPPING
+            self.wind_turbines_state[idx] = 3
+            self.wind_turbines_timer[idx] = 60.0
+        elif state in (1, 3):  # already flashing — ignore
+            pass
+
+    def toggle_wind_flash(self):
+        self.wind_flash = not self.wind_flash
 
     def check_interlock(self):
         # checks if something is running when its not supposed to
