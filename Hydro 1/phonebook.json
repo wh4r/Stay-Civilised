@@ -68,5 +68,81 @@
                 "arg": "100"
             }
         }
+    },
+    {
+        "name": "Coal Power Plant",
+        "number": "5555",
+        "chat": {
+            "1": {
+                "function": false,
+                "text": "Coal power plant control. Which unit would you like?",
+                "option1": "Unit 1",
+                "option2": "Unit 2"
+            },
+            "11": {
+                "function": false,
+                "text": "Unit 1. How should we run it?",
+                "option1": "Start up",
+                "option2": "Set power",
+                "option3": "More"
+            },
+            "111": {
+                "function": true,
+                "name": "coal1_start"
+            },
+            "112": {
+                "function": false,
+                "input": true,
+                "name": "coal1_set_power",
+                "text": "Enter Unit 1 output power (0-100 MW):"
+            },
+            "113": {
+                "function": false,
+                "text": "Unit 1 options:",
+                "option1": "Meet demand (auto)",
+                "option2": "Stop"
+            },
+            "1131": {
+                "function": true,
+                "name": "coal1_set_auto",
+                "arg": "1"
+            },
+            "1132": {
+                "function": true,
+                "name": "coal1_stop"
+            },
+            "12": {
+                "function": false,
+                "text": "Unit 2. How should we run it?",
+                "option1": "Start up",
+                "option2": "Set power",
+                "option3": "More"
+            },
+            "121": {
+                "function": true,
+                "name": "coal2_start"
+            },
+            "122": {
+                "function": false,
+                "input": true,
+                "name": "coal2_set_power",
+                "text": "Enter Unit 2 output power (0-100 MW):"
+            },
+            "123": {
+                "function": false,
+                "text": "Unit 2 options:",
+                "option1": "Meet demand (auto)",
+                "option2": "Stop"
+            },
+            "1231": {
+                "function": true,
+                "name": "coal2_set_auto",
+                "arg": "1"
+            },
+            "1232": {
+                "function": true,
+                "name": "coal2_stop"
+            }
+        }
     }
 ]

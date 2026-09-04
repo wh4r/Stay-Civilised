@@ -469,6 +469,7 @@ class HydroSimulator(QMainWindow):
         self.engine.update_systems(0.1)
         self.engine.update_wind_speed(0.1)
         self.engine.update_wind_turbines(0.1)
+        self.engine.update_coal_power()
         self.engine.auto_turbine_control()
         self.alarm_interlock.set_state(self.engine.check_interlock())
 

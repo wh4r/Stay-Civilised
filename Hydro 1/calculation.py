@@ -147,7 +147,16 @@ class SimulationEngine:
 
         # EDG
         self.edg_started = False
-        
+
+        # COAL POWER PLANTS — up to 2 units, each 0-100 MW
+        self.coal_ramp_rate = 2.0   # MW per update step
+        self.coal_plants = [
+            {'running': False, 'power': 0.0, 'setpoint': 0.0, 'auto': False, 'max': 100.0},
+            {'running': False, 'power': 0.0, 'setpoint': 0.0, 'auto': False, 'max': 100.0},
+        ]
+        self.coal_total_power = 0.0
+        self.total_generation = 0.0
+
         # Constants
         self.SAMPLE_RATE = 44100
         self.OS = platform.system()
@@ -287,6 +296,15 @@ class SimulationEngine:
                     self.wind_turbines_timer = (self.wind_turbines_timer + [0.0]*50)[:50]
                     self.wind_turbines_power = (self.wind_turbines_power + [0.0]*50)[:50]
                     self.wind_turbine_bias = (self.wind_turbine_bias + [0.0]*50)[:50]
+
+                # COAL PLANTS
+                loaded_coal = load_data.get('coal_plants', None)
+                if isinstance(loaded_coal, list) and len(loaded_coal) == len(self.coal_plants):
+                    for idx, data in enumerate(loaded_coal):
+                        if isinstance(data, dict):
+                            self.coal_plants[idx].update(data)
+                self.coal_total_power = load_data.get('coal_total_power', self.coal_total_power)
+                self.total_generation = load_data.get('total_generation', self.total_generation)
         except Exception as e:
             print('explode', e)
 
@@ -397,7 +415,12 @@ class SimulationEngine:
             'wind_turbines_timer': self.wind_turbines_timer,
             'wind_turbines_power': self.wind_turbines_power,
             'wind_total_power': self.wind_total_power,
-            'wind_turbine_bias': self.wind_turbine_bias
+            'wind_turbine_bias': self.wind_turbine_bias,
+
+            # COAL PLANTS
+            'coal_plants': self.coal_plants,
+            'coal_total_power': self.coal_total_power,
+            'total_generation': self.total_generation
         }
 
         if not filename:
@@ -653,7 +676,7 @@ class SimulationEngine:
         # updates the flow through the very long pipe
         self.flow_to_turbine[len(self.flow_to_turbine)-1] = self.gate_opening
         for i in range(0, len(self.flow_to_turbine)-1):
-            self.flow_to_turbine[i] += (self.flow_to_turbine[i+1]-self.flow_to_turbine[i])
+            self.flow_to_turbine[i] += (self.flow_to_turbine[i+1]-self.flow_to_turbine[i])*0.9
 
     def update_gate_pos(self):
         # opens/closes the gate
@@ -717,7 +740,7 @@ class SimulationEngine:
 
         high_accel = False
         if not self.sync:
-            target_rpm = (self.flow_to_turbine[0] * 12.0 - self.friction_coefficient) if not self.is_emergency else 0.0
+            target_rpm = ((self.flow_to_turbine[math.floor(self.gate_opening/100*40)]) * 12.0 - self.friction_coefficient) if not self.is_emergency else 0.0
             if target_rpm - self.current_rpm > 16.67:
                 high_accel = True
                 self.add_damage()
@@ -762,6 +785,76 @@ class SimulationEngine:
         else:
             self.power = 0.0
         return self.power
+
+    # ------------------------------------------------------------------
+    # COAL POWER PLANTS
+    # ------------------------------------------------------------------
+    def update_coal_power(self):
+        """Advance each coal plant's output.
+
+        In auto mode a plant ramps its output toward the shortfall between the
+        total grid demand and the power already supplied by hydro, wind and the
+        other coal plants. In manual mode it holds the setpoint. Output ramps
+        toward the target at COAL_RAMP_RATE and is clamped to [0, max].
+        """
+        total = 0.0
+        for i, plant in enumerate(self.coal_plants):
+            if not plant['running']:
+                plant['power'] = 0.0
+                continue
+
+            if plant['auto']:
+                other = self.power + self.wind_total_power
+                for j, q in enumerate(self.coal_plants):
+                    if j != i:
+                        other += q['power']
+                target = max(0.0, min(plant['max'], self.current_demand - other))
+            else:
+                target = plant['setpoint']
+
+            diff = target - plant['power']
+            step = max(-self.coal_ramp_rate, min(self.coal_ramp_rate, diff))
+            plant['power'] = max(0.0, min(plant['max'], plant['power'] + step))
+            total += plant['power']
+        self.coal_total_power = total
+        self.total_generation = self.power + self.wind_total_power + self.coal_total_power
+
+    def coal_start(self, i):
+        plant = self.coal_plants[i]
+        plant['running'] = True
+        if not plant['auto'] and plant['setpoint'] <= 0:
+            plant['setpoint'] = 50.0
+        self.log(f"Coal unit {i+1} started")
+
+    def coal_stop(self, i):
+        plant = self.coal_plants[i]
+        plant['running'] = False
+        plant['auto'] = False
+        plant['power'] = 0.0
+        self.log(f"Coal unit {i+1} stopped")
+
+    def coal_set_power(self, i, mw):
+        if not self.coal_plants[i]['running']:
+            self.coal_start(i)
+        self.coal_plants[i]['auto'] = False
+        self.coal_plants[i]['setpoint'] = max(0.0, min(100.0, float(mw)))
+        self.log(f"Coal unit {i+1} set to {self.coal_plants[i]['setpoint']:.1f} MW")
+
+    def coal_set_auto(self, i, on=True):
+        self.coal_plants[i]['auto'] = bool(on)
+        self.log(f"Coal unit {i+1} auto = {'ON' if on else 'OFF'}")
+
+    # Unit 1 wrappers (phone-friendly)
+    def coal1_start(self): self.coal_start(0)
+    def coal1_stop(self): self.coal_stop(0)
+    def coal1_set_power(self, mw): self.coal_set_power(0, mw)
+    def coal1_set_auto(self, on): self.coal_set_auto(0, on)
+
+    # Unit 2 wrappers (phone-friendly)
+    def coal2_start(self): self.coal_start(1)
+    def coal2_stop(self): self.coal_stop(1)
+    def coal2_set_power(self, mw): self.coal_set_power(1, mw)
+    def coal2_set_auto(self, on): self.coal_set_auto(1, on)
 
     def add_damage(self, amount=0.1):
         # adds damage

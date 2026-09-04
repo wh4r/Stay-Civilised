@@ -38,22 +38,24 @@ With the addition of sounds, images, multiple menus, and save files, pyinstaller
 - Made water outflow relative to water level
 - Added 50 wind turbines (experimental wind sim)
 - Updated save files
-- Added potion to store save files on the cloud
+- Added option to store save files on the cloud
 - Save files are placed in the correct location
 - Fixed spillway constantly decreasing
 - Turbine cooling fixed (i think)
+- Water hammer effect
 - Experimental:
-    - Phone
+    - Phone (for controlling coal fire plants)
     - Demand (demand is currently impossible to meet)
     - Demand seed option when creating new game
+    - Coal fire power plants
+    - Wind turbines (physics are still a bit off)
 
 ## To do
-- Decrease gate delay when water fills the path (water hammer)
-- Add another window with grid conditions
 - Add power/rpm mode for auto control
 - Add grid frequency simulation
 - Add graph system
 - Change res. temp to be exponential
+- Implement hydraulic autocontrol
 
 ## Known bugs
 - Annunciators on other panels don't work when save file is loaded

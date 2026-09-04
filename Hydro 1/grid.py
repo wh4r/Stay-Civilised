@@ -36,34 +36,47 @@ class GridWindow(QWidget):
 
         main_layout.addWidget(QLabel("<h2>Grid</h2>"))
 
-        generation_layout = QHBoxLayout()
+        # ------------------------------------------------------------------
+        # Top row: Total demand + total generation
+        # ------------------------------------------------------------------
+        top_row = QHBoxLayout()
+        top_row.setSpacing(20)
 
-        current_demand = QVBoxLayout()
-        current_demand.addWidget(QLabel("<h4>Current Demand</h4>"))
+        total_demand = QVBoxLayout()
+        total_demand.addWidget(QLabel("<h4>Total Demand</h4>", alignment=Qt.AlignmentFlag.AlignCenter))
         self.current_demand = SevenSegmentDisplay(6)
         self.current_demand.set_number(8888)
-        current_demand.addWidget(self.current_demand)
-        generation_layout.addLayout(current_demand)
+        total_demand.addWidget(self.current_demand)
+        top_row.addLayout(total_demand, 1)
 
-        generation_layout.addWidget(self.create_vseparator())
+        total_gen = QVBoxLayout()
+        total_gen.addWidget(QLabel("<h4>Total Generation</h4>", alignment=Qt.AlignmentFlag.AlignCenter))
+        self.total_generation = SevenSegmentDisplay(6)
+        self.total_generation.set_number(0)
+        total_gen.addWidget(self.total_generation)
+        top_row.addLayout(total_gen, 1)
 
-        hydro_prod = QVBoxLayout()
-        hydro_prod.addWidget(QLabel("<h4>Hydroelectric Production</h4>"))
-        self.hydro_prod = SevenSegmentDisplay(4)
-        self.hydro_prod.set_number(000)
-        hydro_prod.addWidget(self.hydro_prod)
-        generation_layout.addLayout(hydro_prod)
+        main_layout.addLayout(top_row)
+        main_layout.addWidget(self.create_separator())
 
-        generation_layout.addWidget(self.create_vseparator())
+        # ------------------------------------------------------------------
+        # Remaining displays, two per row
+        # ------------------------------------------------------------------
+        def gen_row(d1_title, d1_key, d2_title, d2_key):
+            row = QHBoxLayout()
+            row.setSpacing(20)
+            for title, key in ((d1_title, d1_key), (d2_title, d2_key)):
+                col = QVBoxLayout()
+                col.addWidget(QLabel(f"<h4>{title}</h4>", alignment=Qt.AlignmentFlag.AlignCenter))
+                widget = SevenSegmentDisplay(6)
+                widget.set_number(0)
+                setattr(self, key, widget)
+                col.addWidget(widget)
+                row.addLayout(col, 1)
+            main_layout.addLayout(row)
 
-        wind_total = QVBoxLayout()
-        wind_total.addWidget(QLabel("<h4>Wind Generation</h4>"))
-        self.wind_total = SevenSegmentDisplay(6)
-        self.wind_total.set_number(0)
-        wind_total.addWidget(self.wind_total)
-        generation_layout.addLayout(wind_total)
-
-        main_layout.addLayout(generation_layout)
+        gen_row("Hydroelectric", "hydro_prod", "Wind Generation", "wind_total")
+        gen_row("Coal Unit 1", "coal_1", "Coal Unit 2", "coal_2")
 
         main_layout.addWidget(self.create_separator())
 
@@ -101,8 +114,11 @@ class GridWindow(QWidget):
 
     def update_ui(self):
         self.current_demand.set_number(self.engine.current_demand)
+        self.total_generation.set_number(round(self.engine.total_generation, 1))
         self.hydro_prod.set_number(round(self.engine.power,1))
         self.wind_total.set_number(round(self.engine.wind_total_power, 1))
+        self.coal_1.set_number(round(self.engine.coal_plants[0]['power'], 1))
+        self.coal_2.set_number(round(self.engine.coal_plants[1]['power'], 1))
 
     # ==========================================================
     # CLOSE EVENT

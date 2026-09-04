@@ -30,6 +30,11 @@ class PhoneWindow(QWidget):
         self.contact = None
         self.node_key = ""
 
+        # Numeric input mode (used to type a value, e.g. coal plant MW)
+        self.input_mode = False
+        self.input_func = ""
+        self.input_value = ""
+
         main_layout = QVBoxLayout()
         self.setLayout(main_layout)
 
@@ -151,11 +156,22 @@ class PhoneWindow(QWidget):
             self.display.setText(self.dialed or "_")
 
     def press_digit(self, digit):
+        if self.input_mode:
+            if len(self.input_value) < 3:
+                trial = self.input_value + digit
+                if int(trial) <= 100:
+                    self.input_value = trial
+                    self.display.setText(self.input_value)
+            self.update_options()
+            return
         if not self.contact and len(self.dialed) < 12:
             self.dialed += digit
             self.display.setText(self.dialed)
 
     def start_call(self):
+        if self.input_mode:
+            self.confirm_input()
+            return
         if self.contact:
             return
         for entry in self.phonebook:
@@ -171,6 +187,8 @@ class PhoneWindow(QWidget):
         self.engine.log(f"Call failed - unknown number {self.dialed}")
 
     def end_call(self):
+        if self.input_mode:
+            self.exit_input()
         if self.contact:
             self.system_note(f"Call ended.")
             self.engine.log(f"Hung up on {self.contact['name']}")
@@ -179,12 +197,25 @@ class PhoneWindow(QWidget):
         self.chat_header.setText("<h4>Messaging</h4>")
         self.dialed = ""
         self.display.setText(self.dialed)
+        self.update_options()
 
     def reset_chat(self):
         self.chat_box.clear()
         self.system_note("Dial a number to start a conversation.")
 
     def press_option(self, index):
+        if self.input_mode:
+            if index == 1:
+                self.confirm_input()
+            elif index == 2:
+                self.input_value = self.input_value[:-1]
+                self.display.setText(self.input_value or "_")
+                self.update_options()
+            elif index == 3:
+                self.system_note("Input cancelled.")
+                self.exit_input()
+                self.end_call()
+            return
         node = self.get_node(self.node_key)
         option_text = node.get(f"option{index}") if node else None
         if not option_text or not self.contact:
@@ -201,6 +232,10 @@ class PhoneWindow(QWidget):
         node = self.get_node(key)
         if not node:
             self.end_call()
+            return
+
+        if node.get("input"):
+            self.start_input(node)
             return
 
         if node.get("function"):
@@ -241,11 +276,66 @@ class PhoneWindow(QWidget):
             self.engine.log(f"Phone function error: {func_name}: {e}")
 
     def update_options(self):
+        if self.input_mode:
+            self.set_input_options()
+            return
         node = self.get_node(self.node_key)
         for i, button in enumerate([self.option_1, self.option_2, self.option_3], start=1):
             option_text = node.get(f"option{i}", "") if node else ""
             button.setText(option_text or f"{i}")
             button.setEnabled(bool(option_text) and bool(self.contact))
+
+    # --- Numeric input mode ---
+    def start_input(self, node):
+        self.input_mode = True
+        self.input_func = node.get("name", "")
+        self.input_value = ""
+        self.display.setText("_")
+        text = node.get("text", "")
+        if text:
+            self.incoming_note(text)
+        self.prompt_note("Use the keypad to enter a value (0-100), then confirm.")
+        self.set_input_options()
+
+    def set_input_options(self):
+        self.option_1.setText("✓ CONFIRM")
+        self.option_2.setText("⌫")
+        self.option_3.setText("CANCEL")
+        for btn in (self.option_1, self.option_2, self.option_3):
+            btn.setEnabled(True)
+        if not self.input_value:
+            self.option_1.setEnabled(False)
+
+    def exit_input(self):
+        self.input_mode = False
+        self.input_func = ""
+        self.input_value = ""
+        self.display.setText(self.dialed or "_")
+
+    def confirm_input(self):
+        if not self.input_value:
+            self.system_note("Enter a value first.")
+            return
+        value = float(self.input_value)
+        func = getattr(self.engine, self.input_func, None)
+        if callable(func):
+            try:
+                func(value)
+                self.engine.log(f"{self.input_func}({value}) via phone")
+                self.outgoing_note(f"{self.input_value} MW")
+                self.system_note("Done.")
+            except Exception as e:
+                self.system_note(f"Error calling '{self.input_func}': {e}")
+                self.engine.log(f"Phone function error: {self.input_func}: {e}")
+        else:
+            self.system_note(f"'{self.input_func}' is not available yet.")
+        self.exit_input()
+        self.end_call()
+
+    def prompt_note(self, text):
+        html = text.replace("\n", "<br>")
+        self.append_bubble(html, align="center", bg="#4a4a4a")
+
 
     def incoming_note(self, text):
         html = text.replace("\n", "<br>")
