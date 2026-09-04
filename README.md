@@ -9,7 +9,7 @@
 2. Copy the token generated
 3. Launch stay civilised and click on the `CLOUD SAVE` button on the main menu
 4. Paste the token and upload save files
-The menu does not automatically refreash. To see changes or load save files, press the `REFREASH` button.
+The menu does not automatically refreash. To see changes or load save files, press the `REFRESH` button.
 
 ## Quickstart (Windows)
 **Clone repo**

@@ -157,7 +157,7 @@ class CloudSaveWindow(QWidget):
         self.show_token_btn.toggled.connect(self.toggle_token_visibility)
         token_row.addWidget(self.show_token_btn)
 
-        self.list_cloud_btn = QPushButton("REFREASH")
+        self.list_cloud_btn = QPushButton("REFRESH")
         self.list_cloud_btn.setStyleSheet(self.retro_button_style("#004a1a", "#006622", "#00220c", "#33ff33", "#66ff66", "#001a08"))
         self.list_cloud_btn.clicked.connect(self.refresh_cloud_files)
         token_row.addWidget(self.list_cloud_btn)
