@@ -521,7 +521,7 @@ class MainMenuWindow(QWidget):
         try:
             seed = int(text.strip())
         except ValueError:
-            QMessageBox.warning(self, "INVALID SEED", "Seed must be an integer.")
+            QMessageBox.warning(self, "INVALID SEED", "Seed must be a positive integer.")
             self.reset_menu_state()
             return
 
