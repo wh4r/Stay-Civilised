@@ -429,7 +429,7 @@ class SimulationEngine:
             else:
                 filename = f"{self.path}saves/{datetime.now().strftime("%Y%m%d_%H%M%S")}"
         else:
-            filename = f"{self.path}{"saves\\" if self.OS == "Windows" else "saves/" if self.OS == "Darwin" else ""}{filename}"
+            filename = f"{self.path}{"saves\\" if self.OS == "Windows" else "saves/"}{filename}"
         try:
             with open(filename, 'w') as f:
                 json.dump(save_variables, f, indent=4)
@@ -442,11 +442,16 @@ class SimulationEngine:
             with open(f"{self.path}log.txt", "r") as f:
                 return f.readlines()
         else:
-            Path("{self.path}log.txt").touch()
+            Path(f"{self.path}log.txt").touch()
 
     def log(self, log = 'error'):
-        with open(f"{self.path}log.txt", "a") as f:
-            f.write(f"{round(self.sim_time, 5)}: {log}\n")
+        if Path(f"{self.path}log.txt").is_file():
+            with open(f"{self.path}log.txt", "a") as f:
+                f.write(f"{round(self.sim_time, 5)}: {log}\n")
+        else:
+            Path(f"{self.path}log.txt").touch()
+            with open(f"{self.path}log.txt", "a") as f:
+                f.write(f"{round(self.sim_time, 5)}: {log}\n")
 
     def clear_log(self):
         with open(self.path, "w") as f:
