@@ -25,7 +25,7 @@ class GridWindow(QWidget):
         self.engine = engine
 
         self.setWindowTitle("Breaker Panel")
-        self.setStyleSheet("background-color: #121212; color: white;")
+        self.setStyleSheet("background-color: #808080; color: #222222;")
 
         # ================= MAIN LAYOUT =================
         main_layout = QVBoxLayout()
@@ -93,7 +93,7 @@ class GridWindow(QWidget):
         line.setFrameShape(QFrame.Shape.HLine)
         line.setFrameShadow(QFrame.Shadow.Sunken)
         line.setStyleSheet("""
-            background-color: #2a2a2a;
+            background-color: #555;
             max-height: 1px;
         """)
         return line
@@ -103,7 +103,7 @@ class GridWindow(QWidget):
             line.setFrameShape(QFrame.Shape.VLine)
             line.setFrameShadow(QFrame.Shadow.Sunken)
             line.setStyleSheet("""
-                background-color: #2a2a2a;
+                background-color: #555;
                 max-width: 1px;
             """)
             return line

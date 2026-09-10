@@ -7,7 +7,7 @@ class SaveWindow(QWidget):
         super().__init__()
         self.engine = engine
         self.setWindowTitle("Save Dialogue")
-        self.setStyleSheet("background-color: #1a1a1a; color: white;")
+        self.setStyleSheet("background-color: #808080; color: #222222;")
         self.setFixedSize(500, 100)
 
         main_layout = QVBoxLayout()

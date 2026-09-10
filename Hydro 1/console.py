@@ -7,7 +7,7 @@ class ConsoleWindow(QWidget):
         super().__init__()
         self.engine = engine
         self.setWindowTitle("Debug console")
-        self.setStyleSheet("background-color: #1a1a1a; color: white;")
+        self.setStyleSheet("background-color: #808080; color: #222222;")
         self.setFixedSize(500, 150)
         self.text = 'None'
 

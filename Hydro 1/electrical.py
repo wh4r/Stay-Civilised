@@ -14,6 +14,7 @@ from PyQt6.QtGui import QPixmap
 from buttons import CustomButton
 from annunciators import Annunciator
 from gauges import UniversalGauge
+from numerical_display import SevenSegmentDisplay
 
 
 class ElectricalWindow(QWidget):
@@ -24,8 +25,8 @@ class ElectricalWindow(QWidget):
         self.engine = engine
 
         self.setWindowTitle("Breaker Panel")
-        self.setStyleSheet("background-color: #121212; color: white;")
-        self.setFixedSize(900, 470)
+        self.setStyleSheet("background-color: #808080; color: #222222;")
+        self.setFixedSize(900, 570)
 
         # ================= MAIN LAYOUT =================
         main_layout = QVBoxLayout()
@@ -39,6 +40,28 @@ class ElectricalWindow(QWidget):
         content_layout.setSpacing(15)
 
         main_layout.addLayout(content_layout)
+
+        # ELECTRICITY USAGE PANELS
+        self.usage_widgets = [
+            [SevenSegmentDisplay(), "Plant usage (MW)"],
+            [SevenSegmentDisplay(), "Generator load (MW)"],
+            [SevenSegmentDisplay(), "Startup transformer load (%)"],
+            [SevenSegmentDisplay(), "BUS A (MW)"],
+            [SevenSegmentDisplay(), "BUS B (MW)"],
+            [SevenSegmentDisplay(), "DC BUS (MW)"]
+        ]
+        usage_layout = QHBoxLayout()
+        for i in self.usage_widgets:
+            i[0].set_number(0)
+            i[0].setFixedHeight(36)
+            i[0].setMinimumWidth(80)
+            layout = QVBoxLayout()
+            layout.addWidget(QLabel(f"<h4>{i[1]}</h4>"))
+            layout.addWidget(i[0])
+            usage_layout.addLayout(layout)
+
+        main_layout.addLayout(usage_layout)
+
 
         # ======================================================
         # LEFT SIDE
@@ -56,7 +79,7 @@ class ElectricalWindow(QWidget):
         header_layout = QHBoxLayout()
         panel_title = QLabel("<h2>ELECTRICAL BREAKER PANEL</h2>")
         panel_title.setStyleSheet("""
-            color: #00e6e6;
+            color: #222222;
             font-family: 'Segoe UI';
             font-weight: bold;
             margin-left: 12px;
@@ -185,14 +208,14 @@ class ElectricalWindow(QWidget):
 
         card.setStyleSheet("""
             QFrame {
-                background-color: #1e1e1e;
-                border: 1px solid #333;
-                border-radius: 5px;
+                background-color: #6a6a6a;
+                border: 2px solid #333;
+                border-radius: 2px;
                 padding: 2px;
             }
 
             QFrame:hover {
-                border: 1px solid #00cccc;
+                border: 2px solid #888;
             }
         """)
 
@@ -211,7 +234,7 @@ class ElectricalWindow(QWidget):
 
         name_label.setStyleSheet("""
             font-size: 10px;
-            color: #dddddd;
+            color: #222222;
             border: none;
             font-family: 'Segoe UI';
         """)
@@ -255,14 +278,14 @@ class ElectricalWindow(QWidget):
             QPushButton {
                 background-color: #880000;
                 color: white;
-                border: 1px solid #aa0000;
-                border-radius: 3px;
+                border: 2px solid #660000;
+                border-radius: 2px;
                 font-weight: bold;
                 font-size: 9px;
             }
 
             QPushButton:hover {
-                border: 1px solid #ff3333;
+                border: 2px solid #cc3333;
             }
 
             QPushButton:pressed {
@@ -274,14 +297,14 @@ class ElectricalWindow(QWidget):
             QPushButton {
                 background-color: #006633;
                 color: white;
-                border: 1px solid #008844;
-                border-radius: 3px;
+                border: 2px solid #004422;
+                border-radius: 2px;
                 font-weight: bold;
                 font-size: 9px;
             }
 
             QPushButton:hover {
-                border: 1px solid #33cc66;
+                border: 2px solid #33cc66;
             }
 
             QPushButton:pressed {
@@ -321,7 +344,7 @@ class ElectricalWindow(QWidget):
         line.setFrameShape(QFrame.Shape.HLine)
         line.setFrameShadow(QFrame.Shadow.Sunken)
         line.setStyleSheet("""
-            background-color: #2a2a2a;
+            background-color: #555;
             max-height: 1px;
         """)
         return line
@@ -339,6 +362,13 @@ class ElectricalWindow(QWidget):
         self.battery_charge.set_value(
             self.engine.battery_charge
         )
+        self.usage_widgets[0][0].set_number(self.engine.bus_a_total+self.engine.bus_b_total+self.engine.dc_bus_total)
+        self.usage_widgets[1][0].set_number(self.engine.power)
+        self.usage_widgets[2][0].set_number(5/self.engine.startup_transformer*100 if self.engine.startup_transformer!=0 else 0)
+        self.usage_widgets[3][0].set_number(self.engine.bus_a_total)
+        self.usage_widgets[4][0].set_number(self.engine.bus_b_total)
+        self.usage_widgets[5][0].set_number(self.engine.dc_bus_total)
+
 
     # ==========================================================
     # CLOSE EVENT

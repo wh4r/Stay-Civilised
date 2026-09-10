@@ -49,20 +49,43 @@ class Annunciator(QLabel):
     # Updates the style of the annunciator
     def update_style(self):
         if self.active:
-            bg = self.alert_color if self.blink else "#333333"
-            fg = "white"
+            if self.blink:
+                if self.alert_color == "red":
+                    bg = "#cc2222"
+                    fg = "white"
+                elif self.alert_color == "orange":
+                    bg = "#ccaa00"
+                    fg = "#222222"
+                elif self.alert_color == "green":
+                    bg = "#22aa44"
+                    fg = "white"
+                else:
+                    bg = "#888888"
+                    fg = "white"
+            else:
+                bg = "#e0e0d8"
+                fg = "#555555"
         elif self.persistent and self.needs_ack:
-            bg = self.alert_color
-            fg = "white"
+            if self.alert_color == "red":
+                bg = "#cc2222"
+                fg = "white"
+            elif self.alert_color == "orange":
+                bg = "#ccaa00"
+                fg = "#222222"
+            elif self.alert_color == "green":
+                bg = "#22aa44"
+                fg = "white"
+            else:
+                bg = "#888888"
+                fg = "white"
         else:
-            bg = "#333333"
-            fg = "#666666"
+            bg = "#e0e0d8"
+            fg = "#888888"
 
         self.setStyleSheet(f"""
             background-color: {bg};
             color: {fg};
-            border: 2px solid #555;
+            border: 2px solid #333;
             font-weight: bold;
-            border-radius: 4px;
+            border-radius: 2px;
         """)
-

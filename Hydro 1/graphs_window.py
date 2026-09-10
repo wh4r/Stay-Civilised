@@ -15,7 +15,7 @@ class GraphsWindow(QWidget):
         self.engine = engine
 
         self.setWindowTitle("Historical Graphs")
-        self.setStyleSheet("background-color: #121212; color: white;")
+        self.setStyleSheet("background-color: #808080; color: #222222;")
         self.resize(720, 360)
 
         main_layout = QVBoxLayout()

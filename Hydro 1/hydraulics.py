@@ -13,7 +13,7 @@ class HydraulicsWindow(QWidget):
         super().__init__()
         self.engine = engine
         self.setWindowTitle("Hydraulic Systems")
-        self.setStyleSheet("background-color: #1a1a1a; color: white;")
+        self.setStyleSheet("background-color: #808080; color: #222222;")
         self.setFixedSize(1000, 700)
 
         main_layout = QVBoxLayout()
@@ -153,7 +153,7 @@ class HydraulicsWindow(QWidget):
         line = QFrame()
         line.setFrameShape(QFrame.Shape.HLine)
         line.setFrameShadow(QFrame.Shadow.Sunken)
-        line.setStyleSheet("background-color: #444;")
+        line.setStyleSheet("background-color: #555;")
         return line
 
     def toggle_pre1(self):
@@ -199,9 +199,9 @@ class HydraulicsWindow(QWidget):
             self.status_p2.update_style()
 
         # Selector styling
-        self.btn_sel_1.setStyleSheet("background-color: #444;" if self.engine.pump_selector != 1 else "background-color: #0066cc;")
-        self.btn_sel_2.setStyleSheet("background-color: #444;" if self.engine.pump_selector != 2 else "background-color: #0066cc;")
-        self.btn_sel_auto.setStyleSheet("background-color: #444;" if self.engine.pump_selector != 0 else "background-color: #0066cc;")
+        self.btn_sel_1.setStyleSheet("background-color: #555;" if self.engine.pump_selector != 1 else "background-color: #0066cc;")
+        self.btn_sel_2.setStyleSheet("background-color: #555;" if self.engine.pump_selector != 2 else "background-color: #0066cc;")
+        self.btn_sel_auto.setStyleSheet("background-color: #555;" if self.engine.pump_selector != 0 else "background-color: #0066cc;")
 
         # Fan 1 status
         if self.engine.fan1_state == 0:
@@ -224,9 +224,9 @@ class HydraulicsWindow(QWidget):
             self.status_f2.update_style()
 
         # Selector styling
-        self.btn_sel_1.setStyleSheet("background-color: #444;" if self.engine.pump_selector != 1 else "background-color: #0066cc;")
-        self.btn_sel_2.setStyleSheet("background-color: #444;" if self.engine.pump_selector != 2 else "background-color: #0066cc;")
-        self.btn_sel_auto.setStyleSheet("background-color: #444;" if self.engine.pump_selector != 0 else "background-color: #0066cc;")
+        self.btn_sel_1.setStyleSheet("background-color: #555;" if self.engine.pump_selector != 1 else "background-color: #0066cc;")
+        self.btn_sel_2.setStyleSheet("background-color: #555;" if self.engine.pump_selector != 2 else "background-color: #0066cc;")
+        self.btn_sel_auto.setStyleSheet("background-color: #555;" if self.engine.pump_selector != 0 else "background-color: #0066cc;")
 
         # Preheaters
         self.status_pr1.set_state(self.engine.pre1_on)

@@ -114,6 +114,29 @@ class SimulationEngine:
         self.battery_charge = 5.0
         self.gen_island = False
 
+        # PLANT USAGE
+        self.bus_a_usage = {
+            "hyd_1": 0,
+            "hyd_fan_1": 0,
+            "hyd_pre_1": 0,
+            "excitation": 0,
+            "bypass": 0,
+            "drain": 0
+        }
+        self.bus_a_total = 0
+        self.bus_b_usage = {
+            "hyd_2": 0,
+            "hyd_fan_2": 0,
+            "hyd_pre_2": 0
+        }
+        self.bus_b_total = 0
+        self.dc_bus_usage = {
+            "lighting": 0.1,
+            "auto": 0
+        }
+        self.dc_bus_total = 0
+        self.startup_transformer = 0
+
         # SPILLWAY
         self.spill_open_1 = 0
         self.spill_open_2 = 0
@@ -174,6 +197,26 @@ class SimulationEngine:
     def update_spillway(self):
         self.spill_1 = min(100, max(0, self.spill_1 + self.spill_open_1*self.hyd_coef))
         self.spill_2 = min(100, max(0, self.spill_2 + self.spill_open_2*self.hyd_coef))
+
+    def update_electrical(self):
+        self.bus_a_total = sum(float(val) for val in self.bus_a_usage.values())
+        self.bus_b_total = sum(float(val) for val in self.bus_b_usage.values())
+        self.dc_bus_total = sum(float(val) for val in self.dc_bus_usage.values())
+        self.startup_transformer = (self.bus_a_total+self.bus_b_total+self.dc_bus_total) if (self.breaker_hv1s1 or self.breaker_hv1s2) else 0
+
+        self.bus_a_usage["hyd_1"] = self.pump1_flow/100
+        self.bus_a_usage["hyd_fan_1"] = 0.1 if self.fan1_state!=0 else 0
+        self.bus_a_usage["hyd_pre_1"] = 0.8 if self.pre1_on else 0
+        self.bus_a_usage["excitation"] = 0.5 if self.excitation_direction!=0 else 0
+        self.bus_a_usage["bypass"] = 0.4 if self.bypass_direction!=0 else 0
+        self.bus_a_usage["drain"] = 0.4 if self.drain_direction!=0 else 0
+
+        self.bus_b_usage["hyd_2"] = self.pump2_flow/100
+        self.bus_b_usage["hyd_fan_2"] = 0.1 if self.fan2_state!=0 else 0
+        self.bus_b_usage["hyd_pre_2"] = 0.8 if self.pre2_on else 0
+
+        self.dc_bus_usage["auto"] = 0.1 if self.auto_state else 0
+                
 
     def load_file(self, filepath=None):
         try:

@@ -25,26 +25,26 @@ class AboutWindow(QWidget):
         self.setWindowTitle("About")
         self.setStyleSheet("""
             QWidget {
-                background-color: #1a1a1a;
-                color: white;
+                background-color: #808080;
+                color: #222222;
             }
 
             QLabel {
                 background: transparent;
-                color: white;
+                color: #222222;
             }
 
             QPushButton {
-                background-color: #2d2d2d;
-                color: white;
-                border: 1px solid #555;
-                border-radius: 6px;
+                background-color: #6a6a6a;
+                color: #222222;
+                border: 2px solid #444;
+                border-radius: 2px;
                 padding: 8px;
                 min-height: 30px;
             }
 
             QPushButton:hover {
-                background-color: #3a3a3a;
+                background-color: #7a7a7a;
             }
 
             QPushButton:pressed {
@@ -89,7 +89,7 @@ class AboutWindow(QWidget):
         title.setStyleSheet("""
             font-size: 28px;
             font-weight: bold;
-            color: white;
+            color: #222222;
         """)
 
         main_layout.addWidget(title)
@@ -97,7 +97,7 @@ class AboutWindow(QWidget):
         subtitle = QLabel("Grid Management Simulator")
         subtitle.setAlignment(Qt.AlignmentFlag.AlignCenter)
         subtitle.setStyleSheet("""
-            color: #b0b0b0;
+            color: #444444;
             font-size: 14px;
         """)
 
@@ -110,7 +110,7 @@ class AboutWindow(QWidget):
         separator = QFrame()
         separator.setFrameShape(QFrame.Shape.HLine)
         separator.setFrameShadow(QFrame.Shadow.Sunken)
-        separator.setStyleSheet("background-color: #444;")
+        separator.setStyleSheet("background-color: #555;")
 
         main_layout.addWidget(separator)
 
@@ -126,7 +126,7 @@ class AboutWindow(QWidget):
         info.setAlignment(Qt.AlignmentFlag.AlignCenter)
         info.setStyleSheet("""
             font-size: 14px;
-            color: #58a6ff;
+            color: #333366;
         """)
 
         main_layout.addWidget(info)
@@ -143,7 +143,7 @@ class AboutWindow(QWidget):
         description.setAlignment(Qt.AlignmentFlag.AlignCenter)
         description.setStyleSheet("""
             font-size: 13px;
-            color: white;
+            color: #222222;
         """)
 
         main_layout.addWidget(description)
@@ -182,7 +182,7 @@ class AboutWindow(QWidget):
         footer = QLabel("Poaitron")
         footer.setAlignment(Qt.AlignmentFlag.AlignCenter)
         footer.setStyleSheet("""
-            color: #888;
+            color: #555;
             font-size: 11px;
         """)
 

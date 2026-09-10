@@ -103,10 +103,10 @@ class GraphWidget(QWidget):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
 
-        painter.fillRect(self.rect(), QColor(18, 18, 18))
+        painter.fillRect(self.rect(), QColor(75, 75, 75))
 
         # Title
-        painter.setPen(QColor(255, 255, 255))
+        painter.setPen(QColor(30, 30, 30))
         painter.setFont(QFont("Segoe UI", 9, QFont.Weight.Bold))
         painter.drawText(
             self.rect().adjusted(0, 0, 0, -self.rect().height() + self.pad_top),
@@ -117,14 +117,14 @@ class GraphWidget(QWidget):
         plot = self.plot_rect
         lo, hi = self._y_bounds()
 
-        painter.setPen(QPen(QColor(60, 60, 60), 1))
+        painter.setPen(QPen(QColor(90, 90, 90), 1))
         for i in range(5):
             y = plot.top() + plot.height() * i / 4
             painter.drawLine(int(plot.left()), int(y), int(plot.right()), int(y))
 
         # Y-axis labels (nice rounded ticks)
         painter.setFont(QFont("Segoe UI", 8))
-        painter.setPen(QColor(200, 200, 200))
+        painter.setPen(QColor(30, 30, 30))
         for i in range(5):
             frac = i / 4
             y = plot.top() + plot.height() * frac
@@ -167,12 +167,12 @@ class GraphWidget(QWidget):
 
         # Axes frame
         painter.setBrush(Qt.BrushStyle.NoBrush)
-        painter.setPen(QPen(QColor(160, 160, 160), 1))
+        painter.setPen(QPen(QColor(50, 50, 50), 1))
         painter.drawRect(plot)
 
         # Unit under title
         if self.unit:
-            painter.setPen(QColor(140, 140, 140))
+            painter.setPen(QColor(50, 50, 50))
             painter.setFont(QFont("Segoe UI", 8))
             painter.drawText(
                 plot.right() - painter.fontMetrics().horizontalAdvance(self.unit) - 2,

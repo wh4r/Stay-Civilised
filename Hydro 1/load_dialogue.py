@@ -8,7 +8,7 @@ class LoadWindow(QWidget):
         super().__init__()
         self.engine = engine
         self.setWindowTitle("Load Dialogue")
-        self.setStyleSheet("background-color: #1a1a1a; color: white;")
+        self.setStyleSheet("background-color: #808080; color: #222222;")
         self.setFixedSize(500, 400) # bit taller to fit the list nicely
 
         this_os = platform.system()
@@ -30,19 +30,19 @@ class LoadWindow(QWidget):
         self.file_list = QListWidget()
         self.file_list.setStyleSheet("""
             QListWidget {
-                background-color: #121212;
-                color: white;
-                border: 2px solid #555;
-                border-radius: 4px;
+                background-color: #6a6a6a;
+                color: #222222;
+                border: 2px solid #444;
+                border-radius: 2px;
                 padding: 5px;
                 font-weight: bold;
             }
             QListWidget::item {
                 padding: 8px;
-                border-bottom: 1px solid #2a2a2a;
+                border-bottom: 1px solid #555;
             }
             QListWidget::item:hover {
-                background-color: #2a2a2a;
+                background-color: #7a7a7a;
             }
             QListWidget::item:selected {
                 background-color: #0066cc;
@@ -62,15 +62,15 @@ class LoadWindow(QWidget):
         
         self.btn_refresh = QPushButton("REFRESH LIST")
         self.btn_refresh.setStyleSheet("""
-            QPushButton { background-color: #444; color: white; border-radius: 4px; padding: 10px; font-weight: bold; }
-            QPushButton:hover { border: 1px solid #999; }
+            QPushButton { background-color: #555; color: white; border-radius: 2px; padding: 10px; font-weight: bold; border: 2px solid #444; }
+            QPushButton:hover { border: 2px solid #888; }
         """)
         self.btn_refresh.clicked.connect(self.populate_files)
         
         self.btn_load = QPushButton("LOAD SELECTED")
         self.btn_load.setStyleSheet("""
-            QPushButton { background-color: #0066cc; color: white; border-radius: 4px; padding: 10px; font-weight: bold; }
-            QPushButton:hover { border: 1px solid #999; }
+            QPushButton { background-color: #0066cc; color: white; border-radius: 2px; padding: 10px; font-weight: bold; border: 2px solid #004488; }
+            QPushButton:hover { border: 2px solid #888; }
         """)
         self.btn_load.clicked.connect(self.handle_load)
 

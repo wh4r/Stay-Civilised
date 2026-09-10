@@ -23,15 +23,15 @@ class CustomInputField(QWidget):
         self.entry.setPlaceholderText(placeholder_text)
         self.entry.setStyleSheet("""
             QLineEdit {
-                background-color: #1e1e1e;
-                color: white;
-                border: 2px solid #555;
-                border-radius: 4px;
+                background-color: #6a6a6a;
+                color: #222222;
+                border: 2px solid #444;
+                border-radius: 2px;
                 padding: 8px;
                 font-weight: bold;
             }
             QLineEdit:focus {
-                border: 2px solid #888; /* lights up slightly when clicked into */
+                border: 2px solid #888;
             }
         """)
         
@@ -41,8 +41,8 @@ class CustomInputField(QWidget):
             QPushButton {{
                 background-color: {color};
                 color: white;
-                border: 1px solid #666;
-                border-radius: 4px;
+                border: 2px solid #444;
+                border-radius: 2px;
                 padding: 8px 15px;
                 font-weight: bold;
             }}
@@ -50,7 +50,7 @@ class CustomInputField(QWidget):
                 background-color: #222;
             }}
             QPushButton:hover {{
-                border: 1px solid #999;
+                border: 2px solid #888;
             }}
         """)
         

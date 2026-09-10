@@ -9,7 +9,7 @@ class TurbineWindow(QWidget):
         super().__init__()
         self.engine = engine
         self.setWindowTitle("Turbine Systems")
-        self.setStyleSheet("background-color: #1a1a1a; color: white;")
+        self.setStyleSheet("background-color: #808080; color: #222222;")
 
         main_layout = QVBoxLayout()
         self.setLayout(main_layout)
@@ -175,7 +175,7 @@ class TurbineWindow(QWidget):
         line = QFrame()
         line.setFrameShape(QFrame.Shape.HLine)
         line.setFrameShadow(QFrame.Shadow.Sunken)
-        line.setStyleSheet("background-color: #444;")
+        line.setStyleSheet("background-color: #555;")
         return line
     
     def update_ui(self):

@@ -84,7 +84,10 @@ class SevenSegmentDisplay(QWidget):
         h = self.rect().height()
         digit_w = w / self.length
 
+        # dark background for LED display
         painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(QColor("#1a0500"))
+        painter.drawRoundedRect(self.rect().adjusted(2, 2, -2, -2), 3, 3)
 
         for i, char in enumerate(self.digits):
             cx = i * digit_w + digit_w * 0.5

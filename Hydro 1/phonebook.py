@@ -50,7 +50,7 @@ class PhoneWindow(QWidget):
 
         phonebook_layout.addWidget(QLabel("<h4>Phonebook</h4>", alignment=Qt.AlignmentFlag.AlignCenter))
         for entry in self.phonebook:
-            label = QLabel(f"<a style='color:#4da6ff; text-decoration:none' href='{entry['number']}'>{entry['name']} - {entry['number']}</a>")
+            label = QLabel(f"<a style='color:#003366; text-decoration:none' href='{entry['number']}'>{entry['name']} - {entry['number']}</a>")
             label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             label.linkActivated.connect(self.set_dial)
             phonebook_layout.addWidget(label)
@@ -61,7 +61,7 @@ class PhoneWindow(QWidget):
         # DIAL LAYOUT
         self.display = QLabel("_")
         self.display.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.display.setStyleSheet("background-color: #0d0d0d; border: 1px solid #444; border-radius: 4px; padding: 8px; font-family: Consolas, monospace; font-size: 18px;")
+        self.display.setStyleSheet("background-color: #6a6a6a; border: 2px solid #444; border-radius: 2px; padding: 8px; font-family: Consolas, monospace; font-size: 18px; color: #222222;")
         phonebook_layout.addWidget(self.display)
 
         dial_layout = QVBoxLayout()
@@ -123,10 +123,10 @@ class PhoneWindow(QWidget):
         self.chat_box.setOpenExternalLinks(False)
         self.chat_box.setStyleSheet("""
             QTextBrowser {
-                background-color: #111;
-                border: 1px solid #444;
-                border-radius: 6px;
-                color: white;
+                background-color: #6a6a6a;
+                border: 2px solid #444;
+                border-radius: 2px;
+                color: #222222;
                 padding: 6px;
             }
         """)
@@ -334,20 +334,20 @@ class PhoneWindow(QWidget):
 
     def prompt_note(self, text):
         html = text.replace("\n", "<br>")
-        self.append_bubble(html, align="center", bg="#4a4a4a")
+        self.append_bubble(html, align="center", bg="#555555")
 
 
     def incoming_note(self, text):
         html = text.replace("\n", "<br>")
-        self.append_bubble(html, align="left", bg="#26323f")
+        self.append_bubble(html, align="left", bg="#4a5a6a")
 
     def outgoing_note(self, text):
         html = text.replace("\n", "<br>")
-        self.append_bubble(html, align="right", bg="#005c4b")
+        self.append_bubble(html, align="right", bg="#3a6a5a")
 
     def system_note(self, text):
         html = text.replace("\n", "<br>")
-        self.append_bubble(html, align="center", bg="#333333")
+        self.append_bubble(html, align="center", bg="#555555")
 
     def append_bubble(self, html, align="left", bg="#26323f"):
         bubble = f'<table width="100%" cellspacing="0" cellpadding="4"><tr><td align="{align}"><span style="background-color:{bg}; color:#ffffff;">{html}</span></td></tr></table>'
@@ -359,7 +359,7 @@ class PhoneWindow(QWidget):
         line = QFrame()
         line.setFrameShape(QFrame.Shape.HLine)
         line.setFrameShadow(QFrame.Shadow.Sunken)
-        line.setStyleSheet("background-color: #444;")
+        line.setStyleSheet("background-color: #555;")
         return line
 
     def closeEvent(self, event):

@@ -56,9 +56,14 @@ class UniversalGauge(QWidget):
         painter.translate(rect.center())
         painter.scale(side / 200.0, side / 200.0)
 
-        # face
-        painter.setPen(QPen(Qt.GlobalColor.white, 2))
-        painter.setBrush(QColor(30, 30, 30))
+        # black bezel
+        painter.setPen(QPen(QColor(20, 20, 20), 3))
+        painter.setBrush(QColor(20, 20, 20))
+        painter.drawEllipse(-94, -94, 188, 188)
+
+        # white face
+        painter.setPen(QPen(QColor(180, 180, 175), 1))
+        painter.setBrush(QColor(240, 240, 235))
         painter.drawEllipse(-90, -90, 180, 180)
         
         if self.warning_zone:
@@ -66,8 +71,8 @@ class UniversalGauge(QWidget):
         if self.reverse_warning_zone:
             self.draw_reverse_warning_zones(painter, self.reverse_yellow_start, self.reverse_red_start)
 
-        # scale
-        painter.setPen(QPen(Qt.GlobalColor.white, 1))
+        # scale ticks - black
+        painter.setPen(QPen(QColor(40, 40, 40), 1))
         # scale if not synchroscope
         if self.span_angle < 360:
             for i in range(0, 11):
@@ -77,21 +82,26 @@ class UniversalGauge(QWidget):
                 painter.drawLine(0, -80, 0, -88)
                 painter.restore()
         else:
-            painter.setPen(QPen(Qt.GlobalColor.green, 3))
+            painter.setPen(QPen(QColor(20, 120, 40), 3))
             painter.drawLine(0, -80, 0, -90) # sync marker
 
-        # needle
+        # needle - black
         painter.save()
         ratio = (self.value - self.min_val) / (self.max_val - self.min_val)
         painter.rotate(self.start_angle + (ratio * self.span_angle))
         painter.setPen(Qt.PenStyle.NoPen)
-        painter.setBrush(self.needle_color)
+        painter.setBrush(QColor(20, 20, 20))
         needle = QPolygonF([QPointF(-2, 0), QPointF(2, 0), QPointF(0, -75)])
         painter.drawPolygon(needle)
         painter.restore()
 
-        # text
-        painter.setPen(Qt.GlobalColor.white)
+        # center cap
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(QColor(60, 60, 60))
+        painter.drawEllipse(-5, -5, 10, 10)
+
+        # text - black on white face
+        painter.setPen(QColor(30, 30, 30))
         if self.span_angle < 360:
             painter.setFont(QFont("Arial", 10, QFont.Weight.Bold))
             painter.drawText(-50, 40, 100, 20, Qt.AlignmentFlag.AlignCenter, f"{round(self.value, self.dp)} {self.unit}")
@@ -211,16 +221,23 @@ class LevelGauge(QWidget):
         painter = QPainter(self)
         w, h = self.width(), self.height()
         
-        # frame
-        painter.setBrush(QColor(50, 50, 50))
+        # black bezel
+        painter.setPen(QPen(QColor(20, 20, 20), 2))
+        painter.setBrush(QColor(20, 20, 20))
+        painter.drawRect(18, 38, w-36, h-76)
+
+        # white face
+        painter.setPen(QPen(QColor(180, 180, 175), 1))
+        painter.setBrush(QColor(240, 240, 235))
         painter.drawRect(20, 40, w-40, h-80)
 
-        # water
+        # water fill
         fill_h = (self.level / 100.0) * (h - 80)
+        painter.setPen(Qt.PenStyle.NoPen)
         painter.setBrush(QColor(self.color[0], self.color[1], self.color[2]))
         painter.drawRect(20, int(h - 40 - fill_h), w-40, int(fill_h))
         
-        # text
-        painter.setPen(Qt.GlobalColor.white)
+        # text - black on white
+        painter.setPen(QColor(30, 30, 30))
         painter.drawText(0, h-30, w, 20, Qt.AlignmentFlag.AlignCenter, f"{self.level:.1f}%")
         painter.drawText(0, 10, w, 20, Qt.AlignmentFlag.AlignCenter, self.title)

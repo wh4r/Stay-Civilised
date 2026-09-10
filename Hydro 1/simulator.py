@@ -47,7 +47,14 @@ class HydroSimulator(QMainWindow):
     def __init__(self, launch_args=None):
         super().__init__()
         self.setWindowTitle("Hydroelectric Plant Control System")
-        self.setStyleSheet("background-color: #121212;")
+        self.setStyleSheet("""
+            QMainWindow { background-color: #808080; }
+            QMenuBar { background-color: #808080; color: #222222; }
+            QMenuBar::item { background-color: #808080; color: #222222; }
+            QMenuBar::item:selected { background-color: #6a6a6a; }
+            QMenu { background-color: #808080; color: #222222; }
+            QMenu::item:selected { background-color: #6a6a6a; }
+        """)
         self.setFixedSize(1130, 730)
 
         # Initialize simulation engine
@@ -287,7 +294,7 @@ class HydroSimulator(QMainWindow):
         gauges_layout.addWidget(self.power_gauge)
         
         sync_container = QVBoxLayout()
-        sync_container.addWidget(QLabel("<font color='white'>Synchroscope</font>", alignment=Qt.AlignmentFlag.AlignCenter))
+        sync_container.addWidget(QLabel("<font color='#222222'>Synchroscope</font>", alignment=Qt.AlignmentFlag.AlignCenter))
         sync_container.addWidget(self.synchro)
         gauges_layout.addLayout(sync_container)
         main_layout.addLayout(gauges_layout)
@@ -538,6 +545,10 @@ class HydroSimulator(QMainWindow):
         self.high_rpm.set_state(self.engine.current_rpm > 530)
         if self.engine.water_level < 50 or self.engine.current_rpm > 530:
             self.engine.add_damage()
+
+        # Update busses
+        self.engine.update_electrical()
+        self.electrical_win.update_ui()
 
         # Update active sound frequencies for the audio callback
         active_freqs = []

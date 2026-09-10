@@ -19,7 +19,7 @@ class WindFarmWindow(QWidget):
         super().__init__()
         self.engine = engine
         self.setWindowTitle("Wind Farm — 50 × 10 MW")
-        self.setStyleSheet("background-color: #121212; color: white;")
+        self.setStyleSheet("background-color: #808080; color: #222222;")
         self.resize(980, 520)
 
         main_layout = QVBoxLayout()
@@ -48,9 +48,9 @@ class WindFarmWindow(QWidget):
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setFixedHeight(420)
-        scroll.setStyleSheet("QScrollArea { border: 1px solid #333; background-color: #1a1a1a; }")
+        scroll.setStyleSheet("QScrollArea { border: 1px solid #555; background-color: #808080; }")
         scroll_container = QWidget()
-        scroll_container.setStyleSheet("background-color: #1a1a1a;")
+        scroll_container.setStyleSheet("background-color: #808080;")
         self.wind_grid = QGridLayout(scroll_container)
         self.wind_grid.setSpacing(6)
         self.wind_grid.setContentsMargins(6, 6, 6, 6)
@@ -61,9 +61,9 @@ class WindFarmWindow(QWidget):
             card = QFrame()
             card.setStyleSheet("""
                 QFrame {
-                    background-color: #1e1e1e;
-                    border: 1px solid #333;
-                    border-radius: 4px;
+                    background-color: #6a6a6a;
+                    border: 1px solid #444;
+                    border-radius: 2px;
                 }
             """)
             v = QVBoxLayout(card)
@@ -95,7 +95,7 @@ class WindFarmWindow(QWidget):
         line = QFrame()
         line.setFrameShape(QFrame.Shape.HLine)
         line.setFrameShadow(QFrame.Shadow.Sunken)
-        line.setStyleSheet("background-color: #2a2a2a; max-height: 1px;")
+        line.setStyleSheet("background-color: #555; max-height: 1px;")
         return line
 
     def handle_wind_toggle(self, idx):
@@ -119,8 +119,8 @@ class WindFarmWindow(QWidget):
                 disp.set_number(round(power, 1))
             if state == 1 or state == 3:
                 flashing_on = self.engine.wind_flash
-                bg = "#ffaa00" if flashing_on else "#332200"
-                border = "#ffcc33" if flashing_on else "#664400"
+                bg = "#ccaa00" if flashing_on else "#8a7a00"
+                border = "#997700" if flashing_on else "#665500"
                 text = "STARTING" if state == 1 else "STOPPING"
                 btn.setText(text)
                 btn.setStyleSheet(f"""
@@ -128,7 +128,7 @@ class WindFarmWindow(QWidget):
                         background-color: {bg};
                         color: white;
                         border: 1px solid {border};
-                        border-radius: 3px;
+                        border-radius: 2px;
                         padding: 4px;
                         font-weight: bold;
                         font-size: 8px;
@@ -140,8 +140,8 @@ class WindFarmWindow(QWidget):
                     QPushButton {
                         background-color: #006633;
                         color: white;
-                        border: 1px solid #008844;
-                        border-radius: 3px;
+                        border: 1px solid #004422;
+                        border-radius: 2px;
                         padding: 4px;
                         font-weight: bold;
                         font-size: 9px;
@@ -153,16 +153,16 @@ class WindFarmWindow(QWidget):
                 btn.setText("OFF")
                 btn.setStyleSheet("""
                     QPushButton {
-                        background-color: #444;
+                        background-color: #555;
                         color: white;
-                        border: 1px solid #666;
-                        border-radius: 3px;
+                        border: 1px solid #444;
+                        border-radius: 2px;
                         padding: 4px;
                         font-weight: bold;
                         font-size: 9px;
                     }
-                    QPushButton:hover { border: 1px solid #999; }
-                    QPushButton:pressed { background-color: #222; }
+                    QPushButton:hover { border: 1px solid #888; }
+                    QPushButton:pressed { background-color: #333; }
                 """)
 
     def closeEvent(self, event):
