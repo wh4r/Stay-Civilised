@@ -1,8 +1,7 @@
 # Stay-Civilised
 
-[![Trello](https://img.shields.io/badge/trello-8A2BE2)](https://trello.com/w/stayciviliseddev)
-
-<img width="976" height="1104" alt="logo" src="https://github.com/user-attachments/assets/f66ac053-5f1c-453e-a524-373f0d3fc5fc" />
+## Roadmap
+<img width="1012" height="191" alt="Untitled Diagram drawio(1)" src="https://github.com/user-attachments/assets/d1655ef3-e341-4d5d-a7e4-5124644d1537" />
 
 ## Cloud save
 1. Create an account on [this website](https://positron.my.id/stay-civilised)
@@ -41,16 +40,3 @@ Programmed and tested on python 3.14.3 avaialble [here](https://www.python.org/d
 ## Installing SSL root certificate on apple devices
 **This step must be done to use cloud saves**
 Python does not create root certificates by default. To create a root certificate, navigate to the directory of the python version used. The python version can be checked using `python --version` in terminal. The directory will be `Applications/Python [version]`. Inside the folder, run `Install Certificates.command` and it will automatically install the root certificate.
-
-## 🗺️ Roadmap
-
-| Version | Feature | Status | Priority |
-| :--- | :--- | :---: | :---: |
-| **v0.2.0-demo** | Rewrite and panel demo | ✅ Live | - |
-| **v0.3.0-demo** | Panel functionality | ✅ Live | - |
-| **v0.4.0-demo** | Automatic turbine control | ✅ Live | - |
-| **v1.0.0-alpha** | Spillway, demand, phone | ✅ Live | - |
-| **v1.1.0-alpha** | Electricity | 🏗️ In dev | High |
-| **v2.0.0-alpha** | Maintenance | ⏳ Planned | High |
-
-Versions are MAJOR.MINOR.PATCH-STAGE
